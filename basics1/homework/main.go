@@ -7,13 +7,22 @@ import (
 func main() {
 	// https://www.shellhacks.com/bash-colors/
 
-	c := cell.CreateCell("станок",
-		"станок для дерева",
-		"100$",
-		"Казань",
-		"имеется",
-		cell.Row{"😎", "DURA", "DURA"},
-		cell.Row{"😎", "AAAAAAAAAAAAAAAAAAAAAAA", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
+	//c := cell.CreateCell("Станок",
+	//	"Станок для дерева",
+	//	"10 000 $",
+	//	"Казань",
+	//	"Имеется",
+	//	cell.Row{"🚀", "Срок доставки", "20 лет"},
+	//	cell.Row{"🎒", "AAAAAAAAAAAAAAAAAAAAAAA", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
+	//)
+
+	c := cell.CreateCell("Название",
+		"Описание",
+		"1000 $",
+		"Москва",
+		"Нет",
+		cell.Row{"🚀", "Опциональная строка 1", "Значение 1"},
+		cell.Row{"🎒", "Опциональная строка 2", "Значение 2"},
 	)
 
 	c.Draw(cell.Borderless,
