@@ -47,13 +47,15 @@ func (c Color) Background() Color {
 	return c + 40
 }
 
-func ColorFunc(col Color) func(string) string {
+type Mod func(s string) string
+
+func ColorFunc(col Color) Mod {
 	return func(s string) string {
 		return "\u001B[" + strconv.Itoa(int(col)) + "m" + s + "\u001B[0m"
 	}
 }
 
-func CharFunc(typ CharType) func(string) string {
+func CharFunc(typ CharType) Mod {
 	return func(s string) string {
 		return "\u001B[" + strconv.Itoa(int(typ)) + "m" + s + "\u001B[0m"
 	}
@@ -62,8 +64,6 @@ func CharFunc(typ CharType) func(string) string {
 type (
 	Row  = [3]string
 	Cell []Row
-
-	Mod func(s string) string
 )
 
 func CreateCell(name, desc, price, loc, deliv string, rows ...Row) Cell {
