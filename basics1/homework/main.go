@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"github.com/ew0s/ewos-to-go-hw/basics1/homework/cell"
 )
 
 func main() {
-	fmt.Println("\033[31mHello \033[0mWorld") // https://www.shellhacks.com/bash-colors/
+	// https://www.shellhacks.com/bash-colors/
 
 	c := cell.CreateCell("станок",
 		"станок для дерева",
@@ -17,6 +16,21 @@ func main() {
 		cell.Row{"😎", "AAAAAAAAAAAAAAAAAAAAAAA", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
 	)
 
-	//c.Draw(Borderless, Bold, Red)
-	c.Draw(cell.Border, cell.Red)
+	c.Draw(cell.Borderless,
+		cell.ColorFunc(cell.LightGray.Background()),
+		cell.ColorFunc(cell.Purple.Foreground()),
+		cell.CharFunc(cell.Bold),
+	)
+
+	c.Draw(cell.Border,
+		cell.ColorFunc(cell.LightGray.Background()),
+		cell.ColorFunc(cell.Purple.Foreground()),
+		cell.CharFunc(cell.Bold),
+	)
+
+	c.Draw(cell.StarredBorder,
+		cell.ColorFunc(cell.LightGray.Background()),
+		cell.ColorFunc(cell.Purple.Foreground()),
+		cell.CharFunc(cell.Bold),
+	)
 }

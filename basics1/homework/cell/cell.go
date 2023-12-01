@@ -4,105 +4,67 @@ import (
 	"fmt"
 	stringutils "github.com/ew0s/ewos-to-go-hw/basics1/homework/utils/string"
 	"slices"
+	"strconv"
 	"unicode/utf8"
 )
 
-//*******************
-//**  name * desk **
-//*******************
+type DrawingType int
+
+const (
+	Borderless = DrawingType(iota)
+	Border
+	StarredBorder
+)
+
+type CharType int
+
+const (
+	Normal     = CharType(0)
+	Bold       = CharType(1)
+	Underlined = CharType(4)
+	Blinking   = CharType(5)
+	Reverse    = CharType(7)
+)
+
+type Color int
+
+const (
+	Black = Color(iota)
+	Red
+	Green
+	Brown
+	Blue
+	Purple
+	Cyan
+	LightGray
+)
+
+func (c Color) Foreground() Color {
+	return c + 30
+}
+
+func (c Color) Background() Color {
+	return c + 40
+}
+
+func ColorFunc(col Color) func(string) string {
+	return func(s string) string {
+		return "\u001B[" + strconv.Itoa(int(col)) + "m" + s + "\u001B[0m"
+	}
+}
+
+func CharFunc(typ CharType) func(string) string {
+	return func(s string) string {
+		return "\u001B[" + strconv.Itoa(int(typ)) + "m" + s + "\u001B[0m"
+	}
+}
 
 type (
 	Row  = [3]string
 	Cell []Row
 
-	DrawingType int
-
 	Mod func(s string) string
 )
-
-const (
-	Borderless = DrawingType(iota)
-	Border     = DrawingType(iota)
-)
-
-// todo: more modes
-func Red(s string) string {
-	return "\u001B[31m" + s + "\u001B[0m"
-}
-
-func Bold(s string) string {
-	return "\u001B[1m " + s + "\u001B[0m"
-}
-
-func (c *Cell) drawBorderless(mods ...Mod) {
-	for _, v := range *c {
-
-		line := v[0] + " " + v[1] + ": " + v[2]
-		for _, mod := range mods {
-			line = mod(line)
-		}
-
-		fmt.Println(line)
-	}
-}
-
-func (c *Cell) drawWithBorders(mods ...Mod) {
-
-	// todo: encapsulate
-	l := make([]int, len(*c))
-	for i, v := range *c {
-		l[i] = utf8.RuneCountInString(v[0] + " " + v[1] + " " + v[2])
-	}
-
-	maxLen := slices.Max(l)
-
-	for i, v := range *c {
-
-		if i == 0 {
-			fmt.Println(stringutils.Populate("_", maxLen+6))
-		} else {
-			fmt.Println(stringutils.Populate("_", maxLen+4) + "|")
-		}
-
-		fmt.Print("|")
-
-		line := v[0] + " " + v[1] + ": " + v[2]
-
-		spaces := ""
-		for k := 0; k < maxLen+3-utf8.RuneCountInString(line); k++ {
-			spaces += " "
-		}
-
-		for _, mod := range mods {
-			line = mod(line)
-		}
-
-		fmt.Print(line)
-
-		fmt.Print(spaces)
-		fmt.Println("|")
-
-		fmt.Print("|")
-		//verticalBord = ""
-		//for k := 0; k < maxLen-2; k++ {
-		//	verticalBord += "_"
-		//}
-
-		if i == len(*c)-1 {
-			fmt.Println(stringutils.Populate("_", maxLen+4) + "|")
-		}
-	}
-}
-
-func (c *Cell) Draw(typ DrawingType, mods ...Mod) {
-
-	switch typ {
-	case Borderless:
-		c.drawBorderless(mods...)
-	case Border:
-		c.drawWithBorders(mods...)
-	}
-}
 
 func CreateCell(name, desc, price, loc, deliv string, rows ...Row) Cell {
 
@@ -118,4 +80,104 @@ func CreateCell(name, desc, price, loc, deliv string, rows ...Row) Cell {
 
 func (c *Cell) Add(rows ...Row) {
 	*c = append(*c, rows...)
+}
+
+func (c *Cell) maxLenOfRow() int {
+	l := make([]int, len(*c))
+	for i, v := range *c {
+		l[i] = utf8.RuneCountInString(v[0] + " " + v[1] + " " + v[2])
+	}
+
+	return slices.Max(l)
+}
+
+func (c *Cell) drawBorderless(mods ...Mod) {
+
+	maxLen := c.maxLenOfRow()
+	for _, v := range *c {
+
+		line := v[0] + " " + v[1] + ": " + v[2]
+
+		fmt.Print(applyMods(line, mods...))
+		fmt.Println(applyMods(stringutils.Populate(" ", maxLen+2-utf8.RuneCountInString(line)), mods...))
+	}
+}
+
+func applyMods(s string, mods ...Mod) string {
+	res := s
+	for _, mod := range mods {
+		res = mod(res)
+	}
+	return res
+}
+
+func (c *Cell) drawWithBorders(mods ...Mod) {
+
+	maxLen := c.maxLenOfRow()
+	for i, v := range *c {
+
+		if i == 0 {
+			fmt.Println(stringutils.Populate("_", maxLen+6))
+		} else {
+			fmt.Println(stringutils.Populate("_", maxLen+4) + "|")
+		}
+
+		fmt.Print("|")
+
+		line := v[0] + " " + v[1] + ": " + v[2]
+
+		fmt.Print(applyMods(line, mods...))
+
+		fmt.Print(applyMods(stringutils.Populate(" ", maxLen+3-utf8.RuneCountInString(line)), mods...))
+		fmt.Println("|")
+
+		fmt.Print("|")
+		if i == len(*c)-1 {
+			fmt.Println(stringutils.Populate("_", maxLen+4) + "|")
+		}
+	}
+}
+
+func (c *Cell) drawWithStarredBorder(mods ...Mod) {
+
+	maxLen := c.maxLenOfRow()
+	for i, v := range *c {
+
+		if i == 0 {
+			fmt.Println(stringutils.Populate("*", maxLen+9))
+		} else {
+			fmt.Println(stringutils.Populate("*", maxLen+7) + "*")
+		}
+
+		fmt.Print("** ")
+
+		line := v[0] + " " + v[1] + ": " + v[2]
+
+		fmt.Print(applyMods(line, mods...))
+
+		fmt.Print(applyMods(stringutils.Populate(" ", maxLen+3-utf8.RuneCountInString(line)), mods...))
+
+		fmt.Println("**")
+
+		fmt.Print("*")
+		if i == len(*c)-1 {
+			fmt.Println(stringutils.Populate("*", maxLen+7) + "*")
+		}
+	}
+
+}
+
+func (c *Cell) Draw(typ DrawingType, mods ...Mod) {
+
+	switch typ {
+	case Borderless:
+		c.drawBorderless(mods...)
+	case Border:
+		c.drawWithBorders(mods...)
+	case StarredBorder:
+		c.drawWithStarredBorder(mods...)
+
+	default:
+		c.drawBorderless(mods...)
+	}
 }
