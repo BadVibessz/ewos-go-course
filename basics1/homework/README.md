@@ -118,6 +118,106 @@ const (
 	StarredBorder
 )
 ```
-// TODO:
+
+Тип **Mod** представляет собой функцию по модификации строки:
+```go
+type Mod func(s string) string
+```
+
+Поддерживаемые **модификации**:
+
+**Цветовы**
+ ```go
+func ColorFunc(col Color) Mod
+```
+Где **Color** имеет вид:
+```go
+type Color int
+
+const (
+	Black = Color(iota)
+	Red
+	Green
+	Brown
+	Blue
+	Purple
+	Cyan
+	LightGray
+)
+```
+
+**Color** имеет два представления: _Foreground_ и _Background_
+
+```go
+func (c Color) Foreground() Color 
+func (c Color) Background() Color 
+```
+
+При использовании _Foreground_ и _Background_ цвет будет применяться к самим символам
+строки и к их _заднему фону_ соответственно.
+
+**Символьные**
+
+```go
+func CharFunc(typ CharType) Mod 
+```
+Где **CharType** имеет вид:
+```go
+type CharType int
+
+const (
+	Normal     = CharType(0)
+	Bold       = CharType(1)
+	Underlined = CharType(4)
+	Blinking   = CharType(5)
+	Reverse    = CharType(7)
+)
+```
+
+_Пользователь может определять свои **Mod'ы** и передавать их в функцию отрисовки_
+
+## Примеры использования
+
+```go
+
+c := cell.CreateCell("Название",
+"Описание",
+"1000 $",
+"Москва",
+"Нет",
+cell.Row{"🚀", "Опциональная строка 1", "Значение 1"},
+cell.Row{"🎒", "Опциональная строка 2", "Значение 2"},
+)
+
+c.Draw(cell.Borderless,
+	cell.ColorFunc(cell.LightGray.Background()),
+	cell.ColorFunc(cell.Purple.Foreground()),
+	cell.CharFunc(cell.Bold), 
+	)
+
+c.Draw(cell.Border,
+	cell.ColorFunc(cell.LightGray.Background()),
+	cell.ColorFunc(cell.Purple.Foreground()),
+	cell.CharFunc(cell.Bold),
+    )
+
+c.Draw(cell.StarredBorder,
+	cell.ColorFunc(cell.LightGray.Background()),
+	cell.ColorFunc(cell.Purple.Foreground()),
+	cell.CharFunc(cell.Bold),
+	)
+```
+
+**Результат работы**:
+
+
+
+<p>
+ <img width="300px" src="../homework/resources/1.jpg" alt="qr"/>
+ <img width="300px" src="../homework/resources/2.jpg" alt="qr"/>
+ <img width="300px" src="../homework/resources/3.jpg" alt="qr"/>
+</p>
+
+
 
 
