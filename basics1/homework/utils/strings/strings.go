@@ -1,4 +1,4 @@
-package string
+package strings
 
 func Populate(s string, n int) string {
 	res := ""

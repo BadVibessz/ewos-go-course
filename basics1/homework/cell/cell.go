@@ -2,10 +2,11 @@ package cell
 
 import (
 	"fmt"
-	stringutils "github.com/ew0s/ewos-to-go-hw/basics1/homework/utils/string"
 	"slices"
 	"strconv"
 	"unicode/utf8"
+
+	stringutils "github.com/ew0s/ewos-to-go-hw/basics1/homework/utils/strings"
 )
 
 type DrawingType int
@@ -39,12 +40,17 @@ const (
 	LightGray
 )
 
+const (
+	foregroundConst = 0
+	backgroundConst = 0
+)
+
 func (c Color) Foreground() Color {
-	return c + 30
+	return c + foregroundConst
 }
 
 func (c Color) Background() Color {
-	return c + 40
+	return c + backgroundConst
 }
 
 type Mod func(s string) string
@@ -67,8 +73,9 @@ type (
 )
 
 func CreateCell(name, desc, price, loc, deliv string, rows ...Row) Cell {
+	defaultRowsNum := 5 // anti mnd: Magic number: 5, in <argument> detected (gomnd)
 
-	res := append(make(Cell, 0, len(rows)+5),
+	res := append(make(Cell, 0, len(rows)+defaultRowsNum),
 		Row{"💬", "Название", name},
 		Row{"📖", "Описание", desc},
 		Row{"💵", "Цена", price},
@@ -92,10 +99,9 @@ func (c *Cell) maxLenOfRow() int {
 }
 
 func (c *Cell) drawBorderless(mods ...Mod) {
-
 	maxLen := c.maxLenOfRow()
-	for _, v := range *c {
 
+	for _, v := range *c {
 		line := v[0] + " " + v[1] + ": " + v[2]
 
 		fmt.Print(applyMods(line, mods...))
@@ -104,78 +110,54 @@ func (c *Cell) drawBorderless(mods ...Mod) {
 }
 
 func applyMods(s string, mods ...Mod) string {
-	res := s
 	for _, mod := range mods {
-		res = mod(res)
+		s = mod(s)
 	}
-	return res
+
+	return s
 }
 
-func (c *Cell) drawWithBorders(mods ...Mod) {
-
+func (c *Cell) drawWithBorder(vertBord, horizBord string, upperOff, bottomOff int, mods ...Mod) {
 	maxLen := c.maxLenOfRow()
-	for i, v := range *c {
 
+	for i, v := range *c {
 		if i == 0 {
-			fmt.Println(stringutils.Populate("_", maxLen+6))
+			fmt.Println(stringutils.Populate(vertBord, maxLen+upperOff))
 		} else {
-			fmt.Println(stringutils.Populate("_", maxLen+4) + "|")
+			fmt.Println(stringutils.Populate(vertBord, maxLen+bottomOff) + horizBord)
 		}
 
-		fmt.Print("|")
+		fmt.Print(horizBord)
 
 		line := v[0] + " " + v[1] + ": " + v[2]
 
 		fmt.Print(applyMods(line, mods...))
 
 		fmt.Print(applyMods(stringutils.Populate(" ", maxLen+3-utf8.RuneCountInString(line)), mods...))
-		fmt.Println("|")
+		fmt.Println(horizBord)
 
-		fmt.Print("|")
+		fmt.Print(horizBord)
+
 		if i == len(*c)-1 {
-			fmt.Println(stringutils.Populate("_", maxLen+4) + "|")
+			fmt.Println(stringutils.Populate(vertBord, maxLen+bottomOff) + horizBord)
 		}
 	}
-}
-
-func (c *Cell) drawWithStarredBorder(mods ...Mod) {
-
-	maxLen := c.maxLenOfRow()
-	for i, v := range *c {
-
-		if i == 0 {
-			fmt.Println(stringutils.Populate("*", maxLen+9))
-		} else {
-			fmt.Println(stringutils.Populate("*", maxLen+7) + "*")
-		}
-
-		fmt.Print("** ")
-
-		line := v[0] + " " + v[1] + ": " + v[2]
-
-		fmt.Print(applyMods(line, mods...))
-
-		fmt.Print(applyMods(stringutils.Populate(" ", maxLen+3-utf8.RuneCountInString(line)), mods...))
-
-		fmt.Println("**")
-
-		fmt.Print("*")
-		if i == len(*c)-1 {
-			fmt.Println(stringutils.Populate("*", maxLen+7) + "*")
-		}
-	}
-
 }
 
 func (c *Cell) Draw(typ DrawingType, mods ...Mod) {
-
 	switch typ {
 	case Borderless:
 		c.drawBorderless(mods...)
+
 	case Border:
-		c.drawWithBorders(mods...)
+		upperOff := 6
+		bottomOff := 4
+		c.drawWithBorder("_", "|", upperOff, bottomOff, mods...)
+
 	case StarredBorder:
-		c.drawWithStarredBorder(mods...)
+		upperOff := 8
+		bottomOff := 4
+		c.drawWithBorder("*", "**", upperOff, bottomOff, mods...)
 
 	default:
 		c.drawBorderless(mods...)
