@@ -1,21 +1,9 @@
 package main
 
-import (
-	"github.com/ew0s/ewos-to-go-hw/basics1/homework/cell"
-)
+import "github.com/ew0s/ewos-to-go-hw/basics1/homework/cell"
 
+// https://www.shellhacks.com/bash-colors/
 func main() {
-	// https://www.shellhacks.com/bash-colors/
-
-	//c := cell.CreateCell("Станок",
-	//	"Станок для дерева",
-	//	"10 000 $",
-	//	"Казань",
-	//	"Имеется",
-	//	cell.Row{"🚀", "Срок доставки", "20 лет"},
-	//	cell.Row{"🎒", "AAAAAAAAAAAAAAAAAAAAAAA", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
-	//)
-
 	c := cell.CreateCell("Название",
 		"Описание",
 		"1000 $",
