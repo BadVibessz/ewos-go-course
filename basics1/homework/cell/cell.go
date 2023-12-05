@@ -4,17 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 	"unicode/utf8"
-
-	stringutils "github.com/ew0s/ewos-to-go-hw/basics1/homework/utils/strings"
-)
-
-type DrawingType int
-
-const (
-	Borderless = DrawingType(iota)
-	Border
-	StarredBorder
 )
 
 type CharType int
@@ -41,8 +32,8 @@ const (
 )
 
 const (
-	foregroundConst = 0
-	backgroundConst = 0
+	foregroundConst = 30
+	backgroundConst = 40
 )
 
 func (c Color) Foreground() Color {
@@ -57,55 +48,74 @@ type Mod func(s string) string
 
 func ColorFunc(col Color) Mod {
 	return func(s string) string {
-		return "\u001B[" + strconv.Itoa(int(col)) + "m" + s + "\u001B[0m"
+		return fmt.Sprintf("\u001B[%vm%v\u001B[0m", strconv.Itoa(int(col)), s)
 	}
 }
 
 func CharFunc(typ CharType) Mod {
 	return func(s string) string {
-		return "\u001B[" + strconv.Itoa(int(typ)) + "m" + s + "\u001B[0m"
+		return fmt.Sprintf("\u001B[%vm%v\u001B[0m", strconv.Itoa(int(typ)), s)
 	}
 }
 
+const numOfValues = 3
+
 type (
-	Row  = [3]string
+	Row  = [numOfValues]string
 	Cell []Row
 )
 
-func CreateCell(name, desc, price, loc, deliv string, rows ...Row) Cell {
-	defaultRowsNum := 5 // anti mnd: Magic number: 5, in <argument> detected (gomnd)
-
-	res := append(make(Cell, 0, len(rows)+defaultRowsNum),
-		Row{"💬", "Название", name},
-		Row{"📖", "Описание", desc},
-		Row{"💵", "Цена", price},
-		Row{"📍", "Локация", loc},
-		Row{"📦", "Доставка", deliv})
-
-	return append(res, rows...)
+// GetRequiredRowNames exported because user need to know what's required (or it's better to store array like this in global var?)
+func GetRequiredRowNames() []string {
+	return []string{"Название", "Описание", "Цена", "Локация", "Доставка"}
 }
 
-func (c *Cell) Add(rows ...Row) {
-	*c = append(*c, rows...)
+func (c *Cell) validate() bool {
+	for _, name := range GetRequiredRowNames() {
+		ind := slices.IndexFunc(*c, func(r Row) bool { return r[1] == name })
+		if ind == -1 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func New(rows ...Row) *Cell {
+	cell := Cell(rows)
+
+	valid := cell.validate()
+	if !valid {
+		fmt.Println("Invalid cell")
+		return nil
+	}
+
+	return &cell
 }
 
 func (c *Cell) maxLenOfRow() int {
 	l := make([]int, len(*c))
-	for i, v := range *c {
-		l[i] = utf8.RuneCountInString(v[0] + " " + v[1] + " " + v[2])
+
+	for i, row := range *c {
+		l[i] += utf8.RuneCountInString(row[0]) + utf8.RuneCountInString(row[1]) + utf8.RuneCountInString(row[2])
 	}
 
-	return slices.Max(l)
+	numOfSpaces := 2
+
+	return slices.Max(l) + numOfSpaces
 }
 
 func (c *Cell) drawBorderless(mods ...Mod) {
 	maxLen := c.maxLenOfRow()
+	off := 2
 
-	for _, v := range *c {
-		line := v[0] + " " + v[1] + ": " + v[2]
+	for _, row := range *c {
+		line := fmt.Sprintf("%s %s: %s", row[0], row[1], row[2])
 
 		fmt.Print(applyMods(line, mods...))
-		fmt.Println(applyMods(stringutils.Populate(" ", maxLen+2-utf8.RuneCountInString(line)), mods...))
+
+		spacesCount := maxLen + off - utf8.RuneCountInString(line)
+		fmt.Println(applyMods(strings.Repeat(" ", spacesCount), mods...))
 	}
 }
 
@@ -120,46 +130,57 @@ func applyMods(s string, mods ...Mod) string {
 func (c *Cell) drawWithBorder(vertBord, horizBord string, upperOff, bottomOff int, mods ...Mod) {
 	maxLen := c.maxLenOfRow()
 
-	for i, v := range *c {
+	for i, row := range *c {
 		if i == 0 {
-			fmt.Println(stringutils.Populate(vertBord, maxLen+upperOff))
+			fmt.Println(strings.Repeat(vertBord, maxLen+upperOff))
 		} else {
-			fmt.Println(stringutils.Populate(vertBord, maxLen+bottomOff) + horizBord)
+			fmt.Println(strings.Repeat(vertBord, maxLen+bottomOff) + horizBord)
 		}
 
 		fmt.Print(horizBord)
 
-		line := v[0] + " " + v[1] + ": " + v[2]
+		line := fmt.Sprintf("%s %s: %s", row[0], row[1], row[2])
 
 		fmt.Print(applyMods(line, mods...))
 
-		fmt.Print(applyMods(stringutils.Populate(" ", maxLen+3-utf8.RuneCountInString(line)), mods...))
+		fmt.Print(applyMods(strings.Repeat(" ", maxLen+3-utf8.RuneCountInString(line)), mods...))
 		fmt.Println(horizBord)
 
 		fmt.Print(horizBord)
 
 		if i == len(*c)-1 {
-			fmt.Println(stringutils.Populate(vertBord, maxLen+bottomOff) + horizBord)
+			fmt.Println(strings.Repeat(vertBord, maxLen+bottomOff) + horizBord)
 		}
 	}
 }
 
-func (c *Cell) Draw(typ DrawingType, mods ...Mod) {
-	switch typ {
-	case Borderless:
-		c.drawBorderless(mods...)
+type DrawingFunc func(mods ...Mod)
 
-	case Border:
+func (c *Cell) Borderless() DrawingFunc {
+	return c.drawBorderless
+}
+
+func (c *Cell) Border() DrawingFunc {
+	return func(mods ...Mod) {
 		upperOff := 6
 		bottomOff := 4
 		c.drawWithBorder("_", "|", upperOff, bottomOff, mods...)
+	}
+}
 
-	case StarredBorder:
+func (c *Cell) StarredBorder() DrawingFunc {
+	return func(mods ...Mod) {
 		upperOff := 8
 		bottomOff := 4
 		c.drawWithBorder("*", "**", upperOff, bottomOff, mods...)
-
-	default:
-		c.drawBorderless(mods...)
 	}
+}
+
+func (c *Cell) Draw(drawingFunc DrawingFunc, mods ...Mod) {
+	if c == nil {
+		fmt.Println("Cell is nil")
+		return
+	}
+
+	drawingFunc(mods...)
 }
