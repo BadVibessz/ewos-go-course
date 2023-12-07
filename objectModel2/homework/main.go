@@ -7,73 +7,73 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 
+	"github.com/ew0s/ewos-to-go-hw/objectModel2/homework/billing"
 	"github.com/joho/godotenv"
 )
 
 const (
-	fileTag        = "file"
-	defaultFileTag = ""
+	fileFlag        = "file"
+	defaultFileFlag = ""
 )
 
-// todo: encapsulate
-func parseJson(j string) []map[string]any {
+const filenameEnvVar = "FILE_NAME"
 
-	var results []map[string]any
+func getFilename() (string, error) {
+	var filename string
 
-	err := json.Unmarshal([]byte(j), &results)
-	if err != nil {
-		return nil // todo:
+	flag.StringVar(&filename, fileFlag, defaultFileFlag, "file to read.")
+	flag.Parse()
+
+	if filename == defaultFileFlag {
+		err := godotenv.Load(".env")
+		if err == nil {
+			val, exist := os.LookupEnv(filenameEnvVar)
+			if exist && val != "" {
+				return val, nil
+			}
+		}
+
+		fmt.Println("Enter path to file")
+
+		reader := bufio.NewReader(os.Stdin)
+
+		str, readErr := reader.ReadString('\n')
+		if readErr != nil {
+			return "", err
+		}
+
+		return str, nil
 	}
 
-	for key, result := range results {
-		address := result["operation"].(map[string]interface{})
-
-		fmt.Println("Reading Value for Key :", key)
-
-		fmt.Println("company :", result["company"],
-			"- type :", result["type"],
-			"- id :", result["id"])
-
-		fmt.Println("operation :", address["created_at"])
-	}
-	return results // todo: maybe map resulting object to Billing{} struct?
+	return filename, nil
 }
 
 func main() {
-	var filename string
-	flag.StringVar(&filename, fileTag, defaultFileTag, "file to read.")
-	flag.Parse()
-
-	if filename == defaultFileTag {
-		err := godotenv.Load(".env")
-		if err != nil {
-			log.Fatalf("Some error occured. Err: %s", err) // todo: do i need to exit here? or maybe just fallthrough to stdin?
-		}
-
-		val, exist := os.LookupEnv("FILE_NAME")
-		if !exist || val == "" {
-			fmt.Println("Enter path to file")
-
-			reader := bufio.NewReader(os.Stdin)
-
-			str, readErr := reader.ReadString('\n')
-			if readErr != nil {
-				log.Fatal(readErr) // todo:
-			}
-
-			filename = str
-		} else {
-			filename = val
-		}
-	}
-
-	println(filename)
-
-	json, err := os.ReadFile(filename)
+	filename, err := getFilename()
 	if err != nil {
-		log.Fatal(err) // todo:
+		log.Fatalf("cannot load filename, err: %s", err)
 	}
 
-	_ = parseJson(string(json))
+	js, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	b, err := billing.ParseJson(string(js))
+	if err != nil {
+		log.Fatal("error occurred while parsing input: ", err)
+	}
+
+	infos := billing.CalculateBalances(b)
+
+	sort.Slice(infos, func(i, j int) bool { return infos[i].Company < infos[j].Company })
+
+	bytes, err := json.MarshalIndent(infos, "", "    ")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(bytes))
 }
