@@ -20,6 +20,8 @@ const (
 
 const filenameEnvVar = "FILE_NAME"
 
+const outputFilename = "out.json"
+
 func getFilename() (string, error) {
 	var filename string
 
@@ -75,5 +77,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(string(bytes))
+	err = os.WriteFile(outputFilename, bytes, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

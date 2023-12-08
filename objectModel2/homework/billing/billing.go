@@ -18,6 +18,14 @@ const (
 	Income
 )
 
+var (
+	errNoSuchVar         = errors.New("no such var")
+	errInvalidType       = errors.New("invalid type")
+	errInvalidValue      = errors.New("invalid type for value provided")
+	errNotString         = errors.New("provided value has type different from string")
+	errInvalidTimeFormat = errors.New("provided value has invalid time format")
+)
+
 type Operation struct {
 	ID        any
 	Type      OperationType
@@ -43,33 +51,32 @@ func lookupVar(key string, data ...map[string]any) (any, error) {
 		}
 	}
 
-	return nil, errors.New("no such var")
+	return nil, errNoSuchVar
 }
 
 func getOperation(data map[string]any) map[string]any {
-	op, exist := data["operation"]
-
-	operation := make(map[string]any)
-	if exist {
-		operation = op.(map[string]any)
+	if opData, exist := data["operation"]; exist {
+		if op, ok := opData.(map[string]any); ok {
+			return op
+		}
 	}
 
-	return operation
+	return nil
 }
 
 func (op *Operation) trySetId(id any) error {
-	switch id.(type) {
+	switch v := id.(type) {
 	case int:
-		*op = Operation{ID: id.(int)}
+		*op = Operation{ID: v}
 
 	case float64:
-		*op = Operation{ID: int(id.(float64))}
+		*op = Operation{ID: int(v)}
 
 	case string:
-		*op = Operation{ID: id.(string)}
+		*op = Operation{ID: v}
 
 	default:
-		return errors.New("invalid ID type") // invalid type
+		return errInvalidType // invalid type
 	}
 
 	return nil
@@ -89,23 +96,23 @@ func (op *Operation) setType(typ string) {
 }
 
 func (op *Operation) trySetValue(val any) error {
-	switch val.(type) {
+	switch v := val.(type) {
 	case int:
-		op.Value = val.(int)
+		op.Value = v
 
 	case float64:
-		if math.Mod(val.(float64), 1.0) == 0 {
-			op.Value = int(val.(float64))
+		if math.Mod(v, 1.0) == 0 {
+			op.Value = int(v)
 		}
 
 	case string:
-		i, convErr := strconv.Atoi(val.(string))
+		i, convErr := strconv.Atoi(v)
 		if convErr == nil {
 			op.Value = i
 		}
 
 	default:
-		return errors.New("invalid type for value provided")
+		return errInvalidValue
 	}
 
 	return nil
@@ -114,12 +121,12 @@ func (op *Operation) trySetValue(val any) error {
 func (op *Operation) trySetCreatedAt(createdAt any) error {
 	s, ok := createdAt.(string)
 	if !ok {
-		return errors.New("provided value has type different from string")
+		return errNotString
 	}
 
 	t, parseErr := time.Parse(time.RFC3339, s)
 	if parseErr != nil {
-		return errors.New("provided value has invalid time format")
+		return errInvalidTimeFormat
 	}
 
 	op.CreatedAt = t
@@ -136,12 +143,19 @@ func ParseJson(j string) (Billings, error) {
 	}
 
 	m := make(Billings)
+
 	for _, result := range results {
+		c, ok := result["company"].(string)
+		if !ok {
+			continue // no company provided
+		}
+
+		comp := c
 		operation := getOperation(result)
 
 		var op Operation
 
-		id, idErr := lookupVar("ID", result, operation)
+		id, idErr := lookupVar("id", result, operation)
 		if idErr != nil {
 			continue // ID does not exist
 		}
@@ -163,7 +177,7 @@ func ParseJson(j string) (Billings, error) {
 		if valErr == nil {
 			err = op.trySetValue(val)
 			if err != nil {
-				// nothing to do
+				op.Value = 0 // anti linter "unhandled err and empty if block"
 			}
 		}
 
@@ -176,8 +190,6 @@ func ParseJson(j string) (Billings, error) {
 		if err != nil {
 			continue // operation with invalid time won't be handled
 		}
-
-		comp := result["company"].(string)
 
 		ops, ok := m[comp]
 		if !ok {
@@ -199,11 +211,13 @@ type CompanyInfo struct {
 
 func CalculateBalances(b Billings) []CompanyInfo {
 	infos := make([]CompanyInfo, 0, len(b))
+
 	for c, ops := range b {
 		validOps := utils.Filter(ops, func(op Operation) bool { return op.Validate() })
 		invalidOps := utils.Filter(ops, func(op Operation) bool { return !op.Validate() })
 
 		balance := 0
+
 		for _, op := range validOps {
 			if op.Type == Income {
 				balance += op.Value
