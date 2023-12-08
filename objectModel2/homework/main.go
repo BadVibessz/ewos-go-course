@@ -20,7 +20,10 @@ const (
 
 const filenameEnvVar = "FILE_NAME"
 
-const outputFilename = "out.json"
+const (
+	outputFilename = "out.json"
+	outputPerm     = 0o664
+)
 
 func getFilename() (string, error) {
 	var filename string
@@ -52,6 +55,25 @@ func getFilename() (string, error) {
 	return filename, nil
 }
 
+func writeToFile(path string, b []byte, perm os.FileMode) error {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, perm)
+	if err != nil {
+		return err
+	}
+
+	_, err = f.Write(b)
+	if err != nil {
+		return err
+	}
+
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
 	filename, err := getFilename()
 	if err != nil {
@@ -77,7 +99,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = os.WriteFile(outputFilename, bytes, 0644)
+	err = writeToFile(outputFilename, bytes, outputPerm)
 	if err != nil {
 		log.Fatal(err)
 	}
