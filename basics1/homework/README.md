@@ -123,7 +123,7 @@ type Mod func(s string) string
 
 **Цветовы**
  ```go
-func ColorFunc(col Color) Mod
+func ColorModifier(col Color) Mod
 ```
 Где **Color** имеет вид:
 ```go
@@ -154,7 +154,7 @@ func (c Color) Background() Color
 **Символьные**
 
 ```go
-func CharFunc(typ CharType) Mod 
+func CharModifier(typ CharType) Mod 
 ```
 Где **CharType** имеет вид:
 ```go
@@ -185,21 +185,21 @@ cell.Row{"🎒", "Опциональная строка 2", "Значение 2"
 )
 
 c.Draw(c.Borderless(),
-	cell.ColorFunc(cell.LightGray.Background()),
-	cell.ColorFunc(cell.Purple.Foreground()),
-	cell.CharFunc(cell.Bold), 
+	cell.ColorModifier(cell.LightGray.Background()),
+	cell.ColorModifier(cell.Purple.Foreground()),
+	cell.CharModifier(cell.Bold), 
 	)
 
 c.Draw(c.Border(),
-	cell.ColorFunc(cell.LightGray.Background()),
-	cell.ColorFunc(cell.Purple.Foreground()),
-	cell.CharFunc(cell.Bold),
+	cell.ColorModifier(cell.LightGray.Background()),
+	cell.ColorModifier(cell.Purple.Foreground()),
+	cell.CharModifier(cell.Bold),
     )
 
 c.Draw(c.StarredBorder(),
-	cell.ColorFunc(cell.LightGray.Background()),
-	cell.ColorFunc(cell.Purple.Foreground()),
-	cell.CharFunc(cell.Bold),
+	cell.ColorModifier(cell.LightGray.Background()),
+	cell.ColorModifier(cell.Purple.Foreground()),
+	cell.CharModifier(cell.Bold),
 	)
 ```
 
