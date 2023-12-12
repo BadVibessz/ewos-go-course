@@ -15,20 +15,20 @@ func main() {
 	)
 
 	c.Draw(c.Borderless(),
-		cell.ColorFunc(cell.LightGray.Background()),
-		cell.ColorFunc(cell.Purple.Foreground()),
-		cell.CharFunc(cell.Bold),
+		cell.ColorModifier(cell.LightGray.Background()),
+		cell.ColorModifier(cell.Purple.Foreground()),
+		cell.CharModifier(cell.Bold),
 	)
 
 	c.Draw(c.Border(),
-		cell.ColorFunc(cell.LightGray.Background()),
-		cell.ColorFunc(cell.Purple.Foreground()),
-		cell.CharFunc(cell.Bold),
+		cell.ColorModifier(cell.LightGray.Background()),
+		cell.ColorModifier(cell.Purple.Foreground()),
+		cell.CharModifier(cell.Bold),
 	)
 
 	c.Draw(c.StarredBorder(),
-		cell.ColorFunc(cell.LightGray.Background()),
-		cell.ColorFunc(cell.Purple.Foreground()),
-		cell.CharFunc(cell.Bold),
+		cell.ColorModifier(cell.LightGray.Background()),
+		cell.ColorModifier(cell.Purple.Foreground()),
+		cell.CharModifier(cell.Bold),
 	)
 }

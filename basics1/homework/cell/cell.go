@@ -46,13 +46,13 @@ func (c Color) Background() Color {
 
 type Mod func(s string) string
 
-func ColorFunc(col Color) Mod {
+func ColorModifier(col Color) Mod {
 	return func(s string) string {
 		return fmt.Sprintf("\u001B[%vm%v\u001B[0m", strconv.Itoa(int(col)), s)
 	}
 }
 
-func CharFunc(typ CharType) Mod {
+func CharModifier(typ CharType) Mod {
 	return func(s string) string {
 		return fmt.Sprintf("\u001B[%vm%v\u001B[0m", strconv.Itoa(int(typ)), s)
 	}
@@ -65,13 +65,13 @@ type (
 	Cell []Row
 )
 
-// GetRequiredRowNames exported because user need to know what's required (or it's better to store array like this in global var?)
-func GetRequiredRowNames() []string {
+// getRequiredRowNames exported because user need to know what's required (or it's better to store array like this in global var?)
+func getRequiredRowNames() []string {
 	return []string{"Название", "Описание", "Цена", "Локация", "Доставка"}
 }
 
 func (c *Cell) validate() bool {
-	for _, name := range GetRequiredRowNames() {
+	for _, name := range getRequiredRowNames() {
 		ind := slices.IndexFunc(*c, func(r Row) bool { return r[1] == name })
 		if ind == -1 {
 			return false
@@ -84,8 +84,7 @@ func (c *Cell) validate() bool {
 func New(rows ...Row) *Cell {
 	cell := Cell(rows)
 
-	valid := cell.validate()
-	if !valid {
+	if !cell.validate() {
 		fmt.Println("Invalid cell")
 		return nil
 	}
