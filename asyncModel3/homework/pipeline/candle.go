@@ -2,8 +2,8 @@ package pipeline
 
 import (
 	"context"
+
 	dom "hw-async/domain"
-	_ "hw-async/generator"
 )
 
 type (
@@ -20,7 +20,7 @@ func ExecutePipeline(ctx context.Context, priceChan InPrice, stages ...Stage) Ou
 	go func() {
 		defer close(out)
 
-		// execute pipeline
+		// setup pipeline
 		stageOut := make(InCandle)
 		for _, stage := range stages {
 			stageOut = stage(ctx, priceChan, stageOut)
