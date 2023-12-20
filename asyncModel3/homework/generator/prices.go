@@ -47,11 +47,16 @@ func (g *PricesGenerator) Prices(ctx context.Context) <-chan domain.Price {
 				for idx, ticker := range g.tickers {
 					min := float64((idx + 1) * 100)
 					max := min + 20
-					prices <- domain.Price{
+
+					// todo: delete!
+					pr := domain.Price{
 						Ticker: ticker,
 						Value:  min + rand.Float64()*(max-min),
 						TS:     ts,
 					}
+					// fmt.Printf("PRICE: %+v\n", pr)
+
+					prices <- pr
 				}
 			}
 		}

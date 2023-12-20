@@ -7,7 +7,8 @@ import (
 	"hw-async/pipeline"
 	"hw-async/utils"
 	"math"
-	"slices"
+	"os"
+	"os/signal"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -25,459 +26,167 @@ const (
 	outputPerm = 0o664
 )
 
-func getClosedCandleIdx(candles []dom.Candle) int {
-	for i, c := range candles {
-		if c.Close != -1 {
-			return i
-		}
-	}
-	return -1
-}
-
-func CandleStage1m(ctx context.Context, pricesChan <-chan dom.Price, _ <-chan dom.Candle) <-chan dom.Candle {
+func pricesToCandles(pricesChan <-chan dom.Price) <-chan dom.Candle {
 	out := make(chan dom.Candle)
-
-	count := 0
-	resultLog := ""
 
 	go func() {
 		defer close(out)
-
-		candles := make([]dom.Candle, 0, len(tickers))
 
 		for p := range pricesChan {
-			select {
-			case <-ctx.Done():
-			// todo:
+			logger.Infof("PRICE: %+v", p)
 
-			default:
-				ts, err := dom.PeriodTS(dom.CandlePeriod1m, p.TS)
-				if err == nil {
-					idx := slices.IndexFunc(candles, func(candle dom.Candle) bool { return candle.Ticker == p.Ticker })
-					if idx != -1 {
-						candle := &candles[idx]
-
-						candle.Low = math.Min(candle.Low, p.Value)
-						candle.High = math.Max(candle.High, p.Value)
-
-						if ts == candle.TS.Add(1*time.Minute) {
-							candle.Close = p.Value
-						}
-
-					} else {
-						candles = append(candles, dom.Candle{
-							Ticker: p.Ticker,
-							Period: dom.CandlePeriod1m,
-							Open:   p.Value,
-							High:   p.Value,
-							Low:    p.Value,
-							Close:  -1,
-							TS:     ts,
-						})
-					}
-				}
-
-				idx := getClosedCandleIdx(candles)
-				if idx != -1 {
-					closed := candles[idx]
-
-					logger.Infof("1m candle created: %+v\n", closed)
-					resultLog += fmt.Sprintf("%+v\n", closed)
-
-					out <- closed // send proceeded candle to channel
-
-					candles = slices.Delete(candles, idx, idx+1)
-					count++
-				}
-
-				if count == len(tickers) {
-					err = utils.WriteToFile(output1m, []byte(resultLog), outputPerm) // todo: serialize to csv!!
-					if err != nil {
-						logger.Errorf("cannot save 1m candles to file: %v+\n", err)
-					}
-
-					return
-				}
-			}
+			out <- utils.PriceToCandle(p)
 		}
 	}()
 
 	return out
 }
 
-//func candleStage(ctx context.Context, period dom.CandlePeriod, pricesChan <-chan dom.Price, candleChan <-chan dom.Candle) <-chan dom.Candle {
-//	out := make(chan dom.Candle)
-//
-//	go func() {
-//		defer close(out)
-//
-//		n, err := utils.CandlePeriodToInt(period)
-//		if err != nil {
-//			return // todo
-//		}
-//
-//		candles := make([]dom.Candle, 0, len(tickers))
-//
-//		count := 0
-//
-//		resultLog := ""
-//
-//		for price := range pricesChan {
-//			select {
-//			case <-ctx.Done():
-//			// todo:
-//
-//			default:
-//				c, open := <-candleChan
-//				if open {
-//					idx := slices.IndexFunc(candles, func(candle dom.Candle) bool { return c.Ticker == candle.Ticker })
-//					if idx != -1 {
-//						candle := &candles[idx]
-//
-//						ts, err := dom.PeriodTS(period, c.TS)
-//						if err == nil {
-//							if ts.Add(time.Duration(n)*time.Minute) == candle.TS {
-//								candle.Close = price.Value
-//							} else {
-//								candle.Close = -1
-//							}
-//
-//							candle.TS = ts
-//							candle.Open = c.Open
-//
-//							candle.Low = math.Min(candle.Low, c.Low)
-//							candle.High = math.Max(candle.High, c.High)
-//						}
-//
-//					} else {
-//						c.Close = -1
-//						c.Period = period
-//
-//						candles = append(candles, c)
-//					}
-//				}
-//
-//				ts, err := dom.PeriodTS(period, price.TS)
-//				if err == nil {
-//					idx := slices.IndexFunc(candles, func(candle dom.Candle) bool { return candle.Ticker == price.Ticker })
-//					if idx != -1 {
-//						candle := &candles[idx]
-//
-//						candle.Low = math.Min(candle.Low, price.Value)
-//						candle.High = math.Max(candle.High, price.Value)
-//
-//						//if ts == candle.TS.Add(time.Duration(n)*time.Minute) {
-//						//if ts == candle.TS.Add(time.Duration(n)*time.Minute) || ts.Add(time.Duration(n)*time.Minute) == candle.TS {
-//						if ts == candle.TS.Add(time.Duration(n)*time.Minute) && candle.Open != -1 {
-//							if candle.Open == -1 {
-//								logger.Errorf("aaaaaaaaaaaaaaaaaaaaaa") // TODO: UNDERSTAND WHY
-//							}
-//							candle.Close = price.Value
-//						}
-//
-//					} else {
-//						candles = append(candles, dom.Candle{
-//							Ticker: price.Ticker,
-//							Period: period,
-//							High:   price.Value,
-//							Low:    price.Value,
-//							Open:   -1, //todo: init with price.Value for 1m candle // todo: open not copies from existing candle by some reason
-//							Close:  -1,
-//							TS:     ts,
-//						})
-//					}
-//				}
-//
-//				idx := getClosedCandleIdx(candles)
-//				if idx != -1 {
-//					closed := candles[idx]
-//
-//					logger.Infof("%s candle created: %+v\n", period, closed)
-//					resultLog += fmt.Sprintf("%+v\n", closed)
-//
-//					out <- closed // send proceeded candle to channel
-//
-//					candles = slices.Delete(candles, idx, idx+1) // todo: encapsulate (utils)
-//					count++
-//				}
-//
-//				if count == len(tickers) {
-//					return
-//				}
-//
-//			}
-//		}
-//	}()
-//
-//	return out
-//}
-
-func candleStage(ctx context.Context, period dom.CandlePeriod, pricesChan <-chan dom.Price, candleChan <-chan dom.Candle) <-chan dom.Candle {
+func candleStage(period dom.CandlePeriod, candleChan <-chan dom.Candle, errChan chan error) <-chan dom.Candle {
 	out := make(chan dom.Candle)
 
 	go func() {
 		defer close(out)
 
-		n, err := utils.CandlePeriodToInt(period)
-		if err != nil {
-			return // todo
-		}
+		candles := make(map[string]dom.Candle)
 
-		candles := make([]dom.Candle, 0, len(tickers))
+		for c := range candleChan {
+			candle, exist := candles[c.Ticker]
 
-		count := 0
+			ts, err := dom.PeriodTS(period, c.TS)
+			if err != nil {
+				errChan <- err
+				continue
+			}
 
-		resultLog := ""
+			if exist { // not proceeded candle exists
+				candle.Close = c.Close
+				candle.Low = math.Min(candle.Low, c.Low)
+				candle.High = math.Max(candle.High, c.High)
 
-		select {
-		case <-ctx.Done():
-		// todo:
+				if ts == candle.TS {
+					out <- candle
 
-		case price, open := <-pricesChan:
-			if open {
-				ts, err := dom.PeriodTS(period, price.TS)
-				if err == nil {
-					idx := slices.IndexFunc(candles, func(candle dom.Candle) bool { return candle.Ticker == price.Ticker })
-					if idx != -1 {
-						candle := &candles[idx]
+					// delete proceeded ticker
+					delete(candles, candle.Ticker)
 
-						candle.Low = math.Min(candle.Low, price.Value)
-						candle.High = math.Max(candle.High, price.Value)
-
-						//if ts == candle.TS.Add(time.Duration(n)*time.Minute) {
-						//if ts == candle.TS.Add(time.Duration(n)*time.Minute) || ts.Add(time.Duration(n)*time.Minute) == candle.TS {
-						if ts == candle.TS.Add(time.Duration(n)*time.Minute) && candle.Open != -1 {
-							if candle.Open == -1 {
-								logger.Errorf("aaaaaaaaaaaaaaaaaaaaaa") // TODO: UNDERSTAND WHY
-							}
-							candle.Close = price.Value
-						}
-
-					} else {
-						candles = append(candles, dom.Candle{
-							Ticker: price.Ticker,
-							Period: period,
-							High:   price.Value,
-							Low:    price.Value,
-							Open:   -1, //todo: init with price.Value for 1m candle // todo: open not copies from existing candle by some reason
-							Close:  -1,
-							TS:     ts,
-						})
-					}
+					logger.Infof("%s candle created: %+v\n", period, candle)
 				}
+
+			} else {
+				c.Close = -1
+				c.Period = period
+				c.TS = ts
+
+				candles[c.Ticker] = c
 			}
-
-		case c, open := <-candleChan:
-			if open {
-				idx := slices.IndexFunc(candles, func(candle dom.Candle) bool { return c.Ticker == candle.Ticker })
-				if idx != -1 {
-					candle := &candles[idx]
-
-					ts, err := dom.PeriodTS(period, c.TS)
-					if err == nil {
-						if ts.Add(time.Duration(n)*time.Minute) == candle.TS {
-							candle.Close = price.Value // todo: embedded Candle struct with bool filed 'Closed' ??
-						} else {
-							candle.Close = -1
-						}
-
-						candle.TS = ts
-						candle.Open = c.Open
-
-						candle.Low = math.Min(candle.Low, c.Low)
-						candle.High = math.Max(candle.High, c.High)
-					}
-
-				} else {
-					c.Close = -1
-					c.Period = period
-
-					candles = append(candles, c)
-				}
-			}
-
-			idx := getClosedCandleIdx(candles)
-			if idx != -1 {
-				closed := candles[idx]
-
-				logger.Infof("%s candle created: %+v\n", period, closed)
-				resultLog += fmt.Sprintf("%+v\n", closed)
-
-				out <- closed // send proceeded candle to channel
-
-				candles = slices.Delete(candles, idx, idx+1) // todo: encapsulate (utils)
-				count++
-			}
-
-			if count == len(tickers) {
-				return
-			}
-
 		}
 	}()
 
 	return out
 }
 
-//func candleStagee(ctx context.Context, period dom.CandlePeriod, pricesChan <-chan dom.Price, candleChan <-chan dom.Candle) <-chan dom.Candle {
-//	out := make(chan dom.Candle)
-//
-//	go func() {
-//		defer close(out)
-//
-//		n, err := utils.CandlePeriodToInt(period)
-//		if err != nil {
-//			return // todo
-//		}
-//
-//		candles := make([]dom.Candle, 0, len(tickers))
-//
-//		count := 0
-//
-//		resultLog := ""
-//
-//		go func() {
-//			for price := range pricesChan {
-//				ts, err := dom.PeriodTS(period, price.TS)
-//				if err == nil {
-//					idx := slices.IndexFunc(candles, func(candle dom.Candle) bool { return candle.Ticker == price.Ticker })
-//					if idx != -1 {
-//						candle := &candles[idx]
-//
-//						candle.Low = math.Min(candle.Low, price.Value)
-//						candle.High = math.Max(candle.High, price.Value)
-//
-//						//if ts == candle.TS.Add(time.Duration(n)*time.Minute) {
-//						if ts == candle.TS.Add(time.Duration(n)*time.Minute) || ts.Add(time.Duration(n)*time.Minute) == candle.TS {
-//							if candle.Open == -1 {
-//								logger.Errorf("aaaaaaaaaaaaaaaaaaaaaa") // TODO: UNDERSTAND WHY
-//							}
-//							candle.Close = price.Value
-//						}
-//
-//					} else {
-//						candles = append(candles, dom.Candle{
-//							Ticker: price.Ticker,
-//							Period: period,
-//							High:   price.Value,
-//							Low:    price.Value,
-//							Open:   -1, //todo: init with price.Value for 1m candle // todo: open not copies from existing candle by some reason
-//							Close:  -1,
-//							TS:     ts,
-//						})
-//					}
-//				}
-//			}
-//		}()
-//
-//		go func() {
-//			for c := range candleChan {
-//				idx := slices.IndexFunc(candles, func(candle dom.Candle) bool { return c.Ticker == candle.Ticker })
-//				if idx != -1 {
-//					candle := &candles[idx]
-//
-//					ts, err := dom.PeriodTS(period, c.TS)
-//					if err == nil {
-//						if ts == candle.TS.Add(time.Duration(n)*time.Minute) || ts.Add(time.Duration(n)*time.Minute) == candle.TS {
-//							candle.Close = price.Value
-//						} else {
-//							candle.Close = -1
-//						}
-//
-//						candle.TS = ts
-//						candle.Open = c.Open
-//
-//						candle.Low = math.Min(candle.Low, c.Low)
-//						candle.High = math.Max(candle.High, c.High)
-//					}
-//
-//				} else {
-//					c.Close = -1
-//					c.Period = period
-//
-//					candles = append(candles, c)
-//				}
-//			}
-//		}()
-//
-//		for {
-//			select {
-//			case <-ctx.Done():
-//				// todo
-//			}
-//		}
-//
-//		for price := range pricesChan {
-//			select {
-//			case <-ctx.Done():
-//			// todo:
-//
-//			default:
-//				c, open := <-candleChan
-//				if open {
-//
-//				}
-//
-//			}
-//
-//			idx := getClosedCandleIdx(candles)
-//			if idx != -1 {
-//				closed := candles[idx]
-//
-//				logger.Infof("%s candle created: %+v\n", period, closed)
-//				resultLog += fmt.Sprintf("%+v\n", closed)
-//
-//				out <- closed // send proceeded candle to channel
-//
-//				candles = slices.Delete(candles, idx, idx+1) // todo: encapsulate (utils)
-//				count++
-//			}
-//
-//			if count == len(tickers) {
-//				return
-//			}
-//
-//		}
-//	}
-//}()
-
-// return out
-// }
-
-// todo:!!!!
-//func CandleStage1mm(ctx context.Context, pricesChan <-chan dom.Price, _ <-chan dom.Candle) <-chan dom.Candle {
-//	return candleStage(ctx, pricesChan, _, )
-//}
-
-func CandleStage2m(ctx context.Context, pricesChan <-chan dom.Price, candleChan <-chan dom.Candle) <-chan dom.Candle {
-	return candleStage(ctx, dom.CandlePeriod2m, pricesChan, candleChan)
+func CandleStage1m(candleChan <-chan dom.Candle, errChan chan error) <-chan dom.Candle {
+	return candleStage(dom.CandlePeriod1m, candleChan, errChan)
 }
 
-func CandleStage3m(ctx context.Context, pricesChan <-chan dom.Price, candleChan <-chan dom.Candle) <-chan dom.Candle {
-	return candleStage(ctx, "3m", pricesChan, candleChan)
+func CandleStage2m(candleChan <-chan dom.Candle, errChan chan error) <-chan dom.Candle {
+	return candleStage(dom.CandlePeriod2m, candleChan, errChan)
 }
 
-func CandleStage10m(ctx context.Context, pricesChan <-chan dom.Price, candleChan <-chan dom.Candle) <-chan dom.Candle {
-	return candleStage(ctx, dom.CandlePeriod10m, pricesChan, candleChan)
+func CandleStage10m(candleChan <-chan dom.Candle, errChan chan error) <-chan dom.Candle {
+	return candleStage(dom.CandlePeriod10m, candleChan, errChan)
+}
+
+func writeCandlesToCsv(candles []dom.Candle, path string) error {
+	output := ""
+	for _, candle := range candles {
+		output += fmt.Sprintf("%s\n", utils.CandleToCsv(candle))
+	}
+
+	err := utils.WriteToFile(path, []byte(output), outputPerm)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func LogCandlesToFile(path string, batchSize int) pipeline.Stage {
+	return func(inCandles pipeline.InCandles, errChan pipeline.InErrors) pipeline.OutCandles {
+		out := make(chan dom.Candle)
+
+		candles := make([]dom.Candle, 0, batchSize)
+
+		go func() {
+			defer close(out)
+
+			for c := range inCandles {
+				candles = append(candles, c)
+
+				if len(candles) == batchSize {
+
+					err := writeCandlesToCsv(candles, path)
+					if err != nil {
+						errChan <- err
+					}
+
+					// clear slice
+					candles = make([]dom.Candle, 0, batchSize)
+				}
+
+				// return read candle
+				out <- c
+			}
+
+			// if chan is closed and there's candles in slice => output
+			if len(candles) != 0 {
+				err := writeCandlesToCsv(candles, path)
+				if err != nil {
+					errChan <- err
+				}
+			}
+		}()
+
+		return out
+	}
 }
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan)
+
+	// register signal interrupt handler
+	go func() {
+		for {
+			sig := <-sigChan
+
+			if sig == os.Interrupt {
+				logger.Info("Interrupting program...")
+				cancel() // cancel context
+			}
+		}
+	}()
+
 	pg := generator.NewPricesGenerator(generator.Config{
 		Factor:  10,
-		Delay:   time.Millisecond * 5,
+		Delay:   time.Millisecond * 500,
 		Tickers: tickers,
 	})
 
 	logger.Info("start prices generator...")
 	prices := pg.Prices(ctx)
 
-	candles := pipeline.ExecutePipeline(ctx, prices, CandleStage1m, CandleStage2m)
+	candleChan := pricesToCandles(prices) // TODO: STOPS WORKING
+	candles, errs := pipeline.ExecutePipeline(ctx, candleChan, CandleStage1m, LogCandlesToFile(output1m, 100),
+		CandleStage2m, LogCandlesToFile(output2m, 1),
+		CandleStage10m, LogCandlesToFile(output10m, 1))
 
-	//for c := range candles {
-	//	logger.Infof("%+v\n", c)
-	//}
+	for err := range errs {
+		logger.Error(err.Error())
+	}
 
 	buf := make([]dom.Candle, 0)
 	for c := range candles {
