@@ -1,5 +1,7 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/notEpsilon/go-pair v0.0.0-20221220200415-e91ef28c6c0b h1:Gq68wUx0yA10riVTMiDfmGXadn0QzBOctwrolJVd+hw=
+github.com/notEpsilon/go-pair v0.0.0-20221220200415-e91ef28c6c0b/go.mod h1:cVLcN4/BCcounYLyaNpi5ffY03ew4yWM6lwD+l7U70w=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sirupsen/logrus v1.8.1 h1:dJKuHgqk1NNQlqoA6BTlM1Wf9DOH3NBjQyu0h9+AZZE=

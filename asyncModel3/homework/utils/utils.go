@@ -5,6 +5,8 @@ import (
 	dom "hw-async/domain"
 	"os"
 	"strconv"
+	"time"
+	"unicode/utf8"
 )
 
 func CandlePeriodToInt(per dom.CandlePeriod) (int, error) {
@@ -43,4 +45,26 @@ func PriceToCandle(p dom.Price) dom.Candle {
 
 func CandleToCsv(c dom.Candle) string {
 	return fmt.Sprintf("%s,%s,%f,%f,%f,%f,%s", c.Ticker, c.Period, c.Open, c.High, c.Low, c.Close, c.TS)
+}
+
+func TimeComparator(a, b time.Time) int {
+	if a == b {
+		return 0
+	} else if a.After(b) {
+		return 1
+	} else {
+		return -1
+	}
+}
+
+func TimeToString(t time.Time) string {
+	h, m, s := t.Clock()
+
+	return fmt.Sprintf("%v:%v:%v", h, m, s)
+}
+
+func CountOfRunesInFloat(f float64) int {
+	s := fmt.Sprintf("%.4f", f)
+
+	return utf8.RuneCount([]byte(s))
 }
