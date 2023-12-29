@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	dom "hw-async/domain"
 	"os"
+	"slices"
 	"strconv"
 	"time"
 	"unicode/utf8"
@@ -64,7 +66,25 @@ func TimeToString(t time.Time) string {
 }
 
 func CountOfRunesInFloat(f float64) int {
-	s := fmt.Sprintf("%.4f", f)
+	return utf8.RuneCount([]byte(fmt.Sprintf("%.4f", f)))
+}
 
-	return utf8.RuneCount([]byte(s))
+func ClearFile(path string) error {
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return nil // if file does not exist => no need for clear
+	}
+
+	if err := os.Truncate(path, 0); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func Min(nums ...float64) float64 {
+	return slices.Min(nums)
+}
+
+func Max(nums ...float64) float64 {
+	return slices.Max(nums)
 }

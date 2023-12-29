@@ -7,7 +7,6 @@ import (
 	"hw-async/graphic"
 	"hw-async/pipeline"
 	"hw-async/utils"
-	"math"
 	"os"
 	"os/signal"
 	"time"
@@ -20,11 +19,15 @@ var tickers = []string{"AAPL", "SBER", "NVDA", "TSLA"}
 var logger = log.New()
 
 const (
-	output1mPath  = "candles_1m_log.csv"
-	output2mPath  = "candles_2m_log.csv"
-	output10mPath = "candles_10m_log.csv"
+	log1mPath  = "output/logs/candles_1m_log.csv"
+	log2mPath  = "output/logs/candles_2m_log.csv"
+	log10mPath = "output/logs/candles_10m_log.csv"
 
-	outputPerm = 0o664
+	graph1mPath  = "output/graphs/1m.txt"
+	graph2mPath  = "output/graphs/2m.txt"
+	graph10mPath = "output/graphs/10m.txt"
+
+	writePerm = 0o664
 )
 
 func pricesToCandles(pricesChan <-chan dom.Price) <-chan dom.Candle {
@@ -68,8 +71,8 @@ func candleStage(period dom.CandlePeriod, candleChan <-chan dom.Candle, errChan 
 
 			if exist { // not proceeded candle exists
 				candle.Close = c.Close
-				candle.Low = math.Min(candle.Low, c.Low)
-				candle.High = math.Max(candle.High, c.High)
+				candle.Low = utils.Min(candle.Open, candle.Low, candle.High, candle.Close, c.Open, c.Low, c.High, c.Close)
+				candle.High = utils.Max(candle.Open, candle.Low, candle.High, candle.Close, c.Open, c.Low, c.High, c.Close)
 
 				if ts == candle.TS.Add(time.Duration(n)*time.Minute) {
 					out <- candle
@@ -111,7 +114,7 @@ func writeCandlesToCsv(candles []dom.Candle, path string) error {
 		output += fmt.Sprintf("%s\n", utils.CandleToCsv(candle))
 	}
 
-	err := utils.WriteToFile(path, []byte(output), outputPerm)
+	err := utils.WriteToFile(path, []byte(output), writePerm)
 	if err != nil {
 		return err
 	}
@@ -159,7 +162,7 @@ func LogCandlesToFile(path string, batchSize int) pipeline.Stage {
 	}
 }
 
-func LogCandleGraphToFile(path string) pipeline.Stage {
+func LogCandlesGraphToFile(path string) pipeline.Stage { // todo: maybe use batchSize as in logs
 	return func(inCandles pipeline.InCandles, errChan pipeline.InErrors) pipeline.OutCandles {
 		out := make(chan dom.Candle)
 
@@ -184,17 +187,18 @@ func LogCandleGraphToFile(path string) pipeline.Stage {
 						timingPrices = append(timingPrices, graphic.TimePrice{First: c.TS, Second: c.Close})
 					}
 
-					graph := graphic.CandleGraphic{
-						Ticker:     t,
-						TimePrices: timingPrices,
-					}
+					//graphic.CandleGraphic{
+					//	Ticker:     t,
+					//	TimePrices: timingPrices,
+					//}
 
-					resLog := graph.GenerateString()
+					graph := graphic.New(t, timingPrices...)
 
-					err := utils.WriteToFile(path, []byte(resLog), outputPerm)
+					resLog := graph.GenerateString('*')
+
+					err := utils.WriteToFile(path, []byte(resLog), writePerm)
 					if err != nil {
 						errChan <- err
-
 						return
 					}
 
@@ -206,7 +210,23 @@ func LogCandleGraphToFile(path string) pipeline.Stage {
 	}
 }
 
+func clearAllFiles(paths ...string) error {
+	for _, p := range paths {
+		err := utils.ClearFile(p)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func main() {
+	err := clearAllFiles(log1mPath, log2mPath, log10mPath, graph1mPath, graph2mPath, graph10mPath)
+	if err != nil {
+		logger.Fatalf("error occuerd while clearing files: %s", err.Error())
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	sigChan := make(chan os.Signal, 1)
@@ -218,7 +238,7 @@ func main() {
 			sig := <-sigChan
 
 			if sig == os.Interrupt {
-				logger.Info("Interrupting program...")
+				logger.Info("interrupting program...")
 				cancel() // cancel context
 			}
 		}
@@ -226,7 +246,7 @@ func main() {
 
 	pg := generator.NewPricesGenerator(generator.Config{
 		Factor:  10,
-		Delay:   time.Millisecond * 5,
+		Delay:   time.Millisecond * 1,
 		Tickers: tickers,
 	})
 
@@ -234,12 +254,13 @@ func main() {
 	prices := pg.Prices(ctx)
 
 	candleChan := pricesToCandles(prices) // TODO: STOPS WORKING
-	candles, errs := pipeline.ExecutePipeline(ctx, candleChan, CandleStage1m, LogCandlesToFile(output1mPath, 100), LogCandleGraphToFile("1m.txt"),
-		CandleStage2m, LogCandlesToFile(output2mPath, 100),
-		CandleStage10m, LogCandlesToFile(output10mPath, 100))
+	candles, errs := pipeline.ExecutePipeline(candleChan,
+		CandleStage1m, LogCandlesToFile(log1mPath, 100), LogCandlesGraphToFile(graph1mPath),
+		CandleStage2m, LogCandlesToFile(log2mPath, 100), LogCandlesGraphToFile(graph2mPath),
+		CandleStage10m, LogCandlesToFile(log10mPath, 100), LogCandlesGraphToFile(graph10mPath))
 
 	// log and handle errors occurred in pipeline stages
-	for err := range errs {
+	for err = range errs {
 		logger.Error(err.Error())
 	}
 
@@ -251,6 +272,4 @@ func main() {
 	for _, c := range buf {
 		logger.Infof("%+v\n", c)
 	}
-
-	cancel()
 }

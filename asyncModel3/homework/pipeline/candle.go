@@ -1,7 +1,6 @@
 package pipeline
 
 import (
-	"context"
 	dom "hw-async/domain"
 )
 
@@ -15,7 +14,7 @@ type (
 
 type Stage func(InCandles, InErrors) OutCandles
 
-func ExecutePipeline(ctx context.Context, candleChan InCandles, stages ...Stage) (OutCandles, OutErrors) {
+func ExecutePipeline(candleChan InCandles, stages ...Stage) (OutCandles, OutErrors) {
 	out := make(chan dom.Candle)
 	err := make(chan error)
 
@@ -29,28 +28,8 @@ func ExecutePipeline(ctx context.Context, candleChan InCandles, stages ...Stage)
 			stageOut = stage(stageOut, err)
 		}
 
-		for {
-			select {
-			case val, open := <-stageOut: // todo: maybe use for range?
-				if open {
-					out <- val
-				} else {
-					return
-				}
-
-			case <-ctx.Done():
-				//val, open := <-stageOut
-				//fmt.Printf("%+v\n, %s", val, open)
-				//
-				//if open {
-				//	out <- val
-				//} else {
-				//	return
-				//}
-
-				// todo: handle graceful shutdown
-				// return
-			}
+		for candle := range stageOut {
+			out <- candle
 		}
 	}()
 

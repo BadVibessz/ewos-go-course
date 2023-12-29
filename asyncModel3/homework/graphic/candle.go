@@ -2,13 +2,16 @@ package graphic
 
 import (
 	"fmt"
-	"github.com/notEpsilon/go-pair"
-	"hw-async/utils"
 	"math"
 	"slices"
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
+
+	"hw-async/utils"
+
+	"github.com/notEpsilon/go-pair"
 )
 
 type TimePrice pair.Pair[time.Time, float64]
@@ -18,14 +21,11 @@ type CandleGraphic struct {
 	TimePrices []TimePrice
 }
 
-func NewCandleGraphic(ticker string, timePrices ...TimePrice) *CandleGraphic {
-	// sort
-	//slices.SortFunc(timePrices, func(a, b TimePrice) int { return utils.TimeComparator(a.First, b.First) })
-
+func New(ticker string, timePrices ...TimePrice) *CandleGraphic {
 	return &CandleGraphic{Ticker: ticker, TimePrices: timePrices}
 }
 
-func (g *CandleGraphic) GenerateString() string {
+func (g *CandleGraphic) GenerateString(piv rune) string {
 	res := fmt.Sprintf("%s\n", g.Ticker)
 
 	prices := make([]float64, 0, len(g.TimePrices))
@@ -43,6 +43,7 @@ func (g *CandleGraphic) GenerateString() string {
 	slices.SortFunc(timings, utils.TimeComparator)
 
 	leftOff := 0
+	lastTimeLen := 0
 
 	for i := range prices {
 		p := prices[i]
@@ -53,21 +54,29 @@ func (g *CandleGraphic) GenerateString() string {
 		// get corresponding time from timings slice
 		tIdx = slices.IndexFunc(timings, func(tim time.Time) bool { return tim == t })
 
-		// todo: calculate gap in spaces and print ***** there
-
 		priceRunesCount := utils.CountOfRunesInFloat(p)
-		off := 3
+		off := 2
+
+		timeStr := utils.TimeToString(t)
+		timeLen := utf8.RuneCountInString(timeStr)
+
+		if lastTimeLen == 0 {
+			lastTimeLen = timeLen
+		}
+
+		spaces := strings.Repeat(" ", (tIdx)*(off+lastTimeLen))
+		pivots := strings.Repeat(string(piv), timeLen)
+
+		res += fmt.Sprintf("%.4f %s %s\n", p, spaces, pivots)
 
 		leftOff = int(math.Max(float64(leftOff), float64(priceRunesCount+off)))
-
-		spaces := strings.Repeat(" ", (tIdx+1)*(priceRunesCount+off))
-		res += fmt.Sprintf("%.4f %s %s\n", p, spaces, "*******")
+		lastTimeLen = timeLen
 	}
 
 	res += strings.Repeat(" ", leftOff)
 	for _, t := range timings {
-		res += fmt.Sprintf("%s  \n", utils.TimeToString(t))
+		res += fmt.Sprintf("%s  ", utils.TimeToString(t))
 	}
 
-	return res
+	return res + "\n"
 }
