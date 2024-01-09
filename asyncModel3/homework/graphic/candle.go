@@ -2,14 +2,13 @@ package graphic
 
 import (
 	"fmt"
+	"hw-async/utils"
 	"math"
 	"slices"
 	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
-
-	"hw-async/utils"
 
 	"github.com/notEpsilon/go-pair"
 )
@@ -48,7 +47,7 @@ func (g *CandleGraphic) GenerateString(piv rune) string {
 	for i := range prices {
 		p := prices[i]
 
-		tIdx := slices.IndexFunc(g.TimePrices, func(tp TimePrice) bool { return tp.Second == p }) // todo: utils
+		tIdx := slices.IndexFunc(g.TimePrices, func(tp TimePrice) bool { return tp.Second == p })
 		t := g.TimePrices[tIdx].First
 
 		// get corresponding time from timings slice

@@ -12,11 +12,15 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+
 	dom "hw-async/domain"
 )
 
-var tickers = []string{"AAPL", "SBER", "NVDA", "TSLA"}
-var logger = log.New()
+var (
+	tickers = []string{"AAPL", "SBER", "NVDA", "TSLA"}
+
+	logger = log.New()
+)
 
 const (
 	log1mPath  = "output/logs/candles_1m_log.csv"
@@ -30,6 +34,11 @@ const (
 	writePerm = 0o664
 )
 
+const (
+	batchSize = 10
+	genFactor = 10
+)
+
 func pricesToCandles(pricesChan <-chan dom.Price) <-chan dom.Candle {
 	out := make(chan dom.Candle)
 
@@ -37,8 +46,6 @@ func pricesToCandles(pricesChan <-chan dom.Price) <-chan dom.Candle {
 		defer close(out)
 
 		for p := range pricesChan {
-			// logger.Infof("PRICE: %+v", p)
-
 			out <- utils.PriceToCandle(p)
 		}
 	}()
@@ -82,7 +89,6 @@ func candleStage(period dom.CandlePeriod, candleChan <-chan dom.Candle, errChan 
 
 					logger.Infof("%s candle created: %+v\n", period, candle)
 				}
-
 			} else {
 				c.Close = -1
 				c.Period = period
@@ -135,7 +141,6 @@ func LogCandlesToFile(path string, batchSize int) pipeline.Stage {
 				candles = append(candles, c)
 
 				if len(candles) == batchSize {
-
 					err := writeCandlesToCsv(candles, path)
 					if err != nil {
 						errChan <- err
@@ -162,7 +167,7 @@ func LogCandlesToFile(path string, batchSize int) pipeline.Stage {
 	}
 }
 
-func LogCandlesGraphToFile(path string) pipeline.Stage { // todo: maybe use batchSize as in logs
+func LogCandlesGraphToFile(path string) pipeline.Stage {
 	return func(inCandles pipeline.InCandles, errChan pipeline.InErrors) pipeline.OutCandles {
 		out := make(chan dom.Candle)
 
@@ -187,11 +192,6 @@ func LogCandlesGraphToFile(path string) pipeline.Stage { // todo: maybe use batc
 						timingPrices = append(timingPrices, graphic.TimePrice{First: c.TS, Second: c.Close})
 					}
 
-					//graphic.CandleGraphic{
-					//	Ticker:     t,
-					//	TimePrices: timingPrices,
-					//}
-
 					graph := graphic.New(t, timingPrices...)
 
 					resLog := graph.GenerateString('*')
@@ -201,7 +201,6 @@ func LogCandlesGraphToFile(path string) pipeline.Stage { // todo: maybe use batc
 						errChan <- err
 						return
 					}
-
 				}
 			}
 		}()
@@ -245,31 +244,33 @@ func main() {
 	}()
 
 	pg := generator.NewPricesGenerator(generator.Config{
-		Factor:  10,
+		Factor:  genFactor,
 		Delay:   time.Millisecond * 1,
 		Tickers: tickers,
 	})
 
 	logger.Info("start prices generator...")
-	prices := pg.Prices(ctx)
 
-	candleChan := pricesToCandles(prices) // TODO: STOPS WORKING
+	prices := pg.Prices(ctx)
+	candleChan := pricesToCandles(prices)
+
 	candles, errs := pipeline.ExecutePipeline(candleChan,
-		CandleStage1m, LogCandlesToFile(log1mPath, 100), LogCandlesGraphToFile(graph1mPath),
-		CandleStage2m, LogCandlesToFile(log2mPath, 100), LogCandlesGraphToFile(graph2mPath),
-		CandleStage10m, LogCandlesToFile(log10mPath, 100), LogCandlesGraphToFile(graph10mPath))
+		CandleStage1m, LogCandlesToFile(log1mPath, batchSize), LogCandlesGraphToFile(graph1mPath),
+		CandleStage2m, LogCandlesToFile(log2mPath, batchSize), LogCandlesGraphToFile(graph2mPath),
+		CandleStage10m, LogCandlesToFile(log10mPath, batchSize), LogCandlesGraphToFile(graph10mPath),
+	)
 
 	// log and handle errors occurred in pipeline stages
-	for err = range errs {
-		logger.Error(err.Error())
-	}
 
-	buf := make([]dom.Candle, 0)
+	// listen for occurred errors
+	go func() {
+		for err = range errs {
+			logger.Error(err.Error())
+		}
+	}()
+
+	// read from chan to make it work
 	for c := range candles {
-		buf = append(buf, c)
-	}
-
-	for _, c := range buf {
-		logger.Infof("%+v\n", c)
+		logger.Infof("pipeline output: %+v\n", c)
 	}
 }

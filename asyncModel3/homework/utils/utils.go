@@ -50,13 +50,13 @@ func CandleToCsv(c dom.Candle) string {
 }
 
 func TimeComparator(a, b time.Time) int {
-	if a == b {
+	if a.Equal(b) {
 		return 0
 	} else if a.After(b) {
 		return 1
-	} else {
-		return -1
 	}
+
+	return -1
 }
 
 func TimeToString(t time.Time) string {
@@ -74,11 +74,7 @@ func ClearFile(path string) error {
 		return nil // if file does not exist => no need for clear
 	}
 
-	if err := os.Truncate(path, 0); err != nil {
-		return err
-	}
-
-	return nil
+	return os.Truncate(path, 0)
 }
 
 func Min(nums ...float64) float64 {
