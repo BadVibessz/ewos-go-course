@@ -1,9 +1,9 @@
 package server
 
 import (
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repositories"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 )
 
 type Server struct {
-	UserRepo repositories.UserRepo
+	UserRepo repository.UserRepo
 }
