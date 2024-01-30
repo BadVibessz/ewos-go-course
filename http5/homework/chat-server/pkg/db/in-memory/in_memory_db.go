@@ -1,7 +1,10 @@
 package in_memory
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
+	"os"
 	"sync"
 )
 
@@ -17,11 +20,36 @@ type InMemDB struct {
 	m      *sync.RWMutex
 }
 
-func NewInMemDB() *InMemDB {
-	return &InMemDB{
+func NewInMemDB(ctx context.Context, savePath string) *InMemDB {
+	db := InMemDB{
 		Tables: make(map[string]Table),
 		m:      &sync.RWMutex{},
 	}
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		<-ctx.Done()
+		db.Save(savePath, &wg) // TODO: UNDERSTAND HOW TO SAVE (not falling into this func)
+	}()
+
+	return &db
+}
+
+func (db *InMemDB) Save(path string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	bytes, err := json.Marshal(db.Tables)
+	if err != nil {
+		return // todo: log?
+	}
+
+	err = os.WriteFile(path, bytes, 0644)
+	if err != nil {
+		return
+	}
+
 }
 
 func (db *InMemDB) CreateTable(name string) {
@@ -62,13 +90,13 @@ func (db *InMemDB) Clear() {
 }
 
 func (db *InMemDB) AddRow(table string, identifier string, row any) error {
-	db.m.Lock()
-	defer db.m.Unlock()
-
 	t, err := db.GetTable(table)
 	if err != nil {
 		return err
 	}
+
+	db.m.Lock()
+	defer db.m.Unlock()
 
 	t[identifier] = row
 

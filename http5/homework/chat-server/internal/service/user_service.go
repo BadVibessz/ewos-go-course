@@ -22,6 +22,8 @@ var (
 	UserWithThisUsernameExistsErr = errors.New("user with this username already exists")
 )
 
+// TODO: LOG IN HANDLERS LAYER
+
 type UserService struct {
 	UserRepo UserRepo
 }
@@ -104,7 +106,7 @@ func (us *UserService) UpdateUser(ctx context.Context, id int, updateModel dto.U
 	return updated, nil
 }
 
-func (us *UserService) DeleteUser(ctx context.Context, id int) (*model.User, error) {
+func (us *UserService) DeleteUser(ctx context.Context, id int) (*model.User, error) { // todo: authorize admin rights
 	deleted, err := us.UserRepo.DeleteUser(ctx, id)
 	if err != nil {
 		return nil, err

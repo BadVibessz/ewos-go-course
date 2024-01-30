@@ -6,7 +6,7 @@ import (
 
 var inMemDB = InMemDB{}
 
-func TestTableCreated(t *testing.T) {
+func TestTableCreated(t *testing.T) { // todo: make it pass
 	inMemDB.Clear()
 
 	tableName := "new_table"
