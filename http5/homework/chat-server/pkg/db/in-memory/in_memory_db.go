@@ -20,36 +20,67 @@ type InMemDB struct {
 	m      *sync.RWMutex
 }
 
-func NewInMemDB(ctx context.Context, savePath string) *InMemDB {
+func NewInMemDB(ctx context.Context, savePath string) (*InMemDB, <-chan any) {
 	db := InMemDB{
 		Tables: make(map[string]Table),
 		m:      &sync.RWMutex{},
 	}
+
+	savedChan := make(chan any)
 
 	wg := sync.WaitGroup{}
 
 	wg.Add(1)
 	go func() {
 		<-ctx.Done()
-		db.Save(savePath, &wg) // TODO: UNDERSTAND HOW TO SAVE (not falling into this func)
+		db.Save(savePath, &wg, savedChan) // TODO: UNDERSTAND HOW TO SAVE (not falling into this func)
 	}()
 
-	return &db
+	return &db, savedChan
 }
 
-func (db *InMemDB) Save(path string, wg *sync.WaitGroup) {
+func NewInMemDBFromJSON(ctx context.Context, jsonState string, savePath string) (*InMemDB, <-chan any, error) {
+	tables := make(map[string]Table)
+
+	err := json.Unmarshal([]byte(jsonState), &tables) // todo: not unmarshalls embedded map
+	if err != nil {
+		return nil, nil, err
+	}
+
+	db := InMemDB{
+		Tables: tables,
+		m:      &sync.RWMutex{},
+	}
+
+	savedChan := make(chan any)
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		<-ctx.Done()
+		db.Save(savePath, &wg, savedChan)
+	}()
+
+	return &db, savedChan, nil
+}
+
+func (db *InMemDB) Save(path string, wg *sync.WaitGroup, doneChan chan any) {
 	defer wg.Done()
 
 	bytes, err := json.Marshal(db.Tables)
 	if err != nil {
+		doneChan <- err
 		return // todo: log?
 	}
 
 	err = os.WriteFile(path, bytes, 0644)
 	if err != nil {
+		doneChan <- err
 		return
 	}
 
+	doneChan <- "ok"
 }
 
 func (db *InMemDB) CreateTable(name string) {

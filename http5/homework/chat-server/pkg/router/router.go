@@ -1,17 +1,18 @@
 package router
 
 import (
-	"github.com/go-chi/chi"
+	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func MakeRoutes(basePath string, routers []chi.Router) chi.Router {
+func MakeRoutes(basePath string, routers map[string]chi.Router) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Recoverer)
 
-	for _, router := range routers {
-		r.Mount(basePath, router)
+	for routerPath, router := range routers {
+		r.Mount(fmt.Sprintf("%s%s", basePath, routerPath), router)
 	}
 
 	return r

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
 type PrivateMessageRepo interface {
@@ -90,8 +91,17 @@ func (ms *MessageService) GetPrivateMessage(ctx context.Context, id int) (*model
 	return msg, nil
 }
 
-func (ms *MessageService) GetAllPrivateMessages(ctx context.Context) []*model.PrivateMessage {
-	return ms.PrivateMessageRepo.GetAllPrivateMessages(ctx)
+func (ms *MessageService) GetAllPrivateMessages(ctx context.Context, userFrom *model.User) []*model.PrivateMessage {
+	messages := ms.PrivateMessageRepo.GetAllPrivateMessages(ctx)
+
+	// return only messages that were sent to current user
+	return sliceutils.Filter(messages, func(msg *model.PrivateMessage) bool { return msg.To.ID == userFrom.ID })
+}
+
+func (ms *MessageService) GetAllPrivateMessagesFromUser(ctx context.Context, user *model.User, id int) []*model.PrivateMessage {
+	messages := ms.PrivateMessageRepo.GetAllPrivateMessages(ctx)
+
+	return sliceutils.Filter(messages, func(msg *model.PrivateMessage) bool { return msg.From.ID == id && msg.To.ID == user.ID })
 }
 
 func (ms *MessageService) GetPublicMessage(ctx context.Context, id int) (*model.PublicMessage, error) {

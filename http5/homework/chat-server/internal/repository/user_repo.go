@@ -89,11 +89,12 @@ func (ur *UserRepoInMemDB) GetUserByEmail(ctx context.Context, email string) (*m
 		return nil, NoSuchUserErr
 	}
 
-	user := sliceutils.Filter(users, func(u *model.User) bool { return u.Email == email })[0]
-
-	if user == nil {
+	filtered := sliceutils.Filter(users, func(u *model.User) bool { return u.Email == email })
+	if len(filtered) == 0 {
 		return nil, NoSuchUserErr
 	}
+
+	user := filtered[0]
 
 	return user, nil
 }
@@ -104,11 +105,13 @@ func (ur *UserRepoInMemDB) GetUserByUsername(ctx context.Context, username strin
 		return nil, NoSuchUserErr
 	}
 
-	user := sliceutils.Filter(users, func(u *model.User) bool { return u.Username == username })[0]
+	filtered := sliceutils.Filter(users, func(u *model.User) bool { return u.Username == username })
 
-	if user == nil {
+	if len(filtered) == 0 {
 		return nil, NoSuchUserErr
 	}
+
+	user := filtered[0]
 
 	return user, nil
 }

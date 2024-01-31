@@ -2,10 +2,12 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/requset"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/middleware"
-	"github.com/go-chi/chi"
+	handlerutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/handler"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
@@ -31,29 +33,37 @@ func NewUserHandler(us middleware.UserService, logger *logrus.Logger) *UserHandl
 func (uh *UserHandler) Routes() chi.Router {
 	router := chi.NewRouter()
 
-	router.Route("/users", func(r chi.Router) {
+	router.Group(func(r chi.Router) {
 		r.Post("/register", uh.Register)
 	})
 
 	router.Group(func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(uh.UserService))
-		r.Get("/users/all", uh.GetAll)
+		r.Get("/all", uh.GetAll)
 	})
 
 	return router
 }
 
-func (uh *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) { // TODO: PANIC IF TRYING REGISTER 2nd USER
 	registerReq := requset.RegisterRequest{}
-	err := render.DecodeJSON(r.Body, &registerReq)
+	err := render.DecodeJSON(req.Body, &registerReq)
 	if err != nil {
-		uh.logger.Errorf("error occured decoding request body to RegisterRequest struct: %s", err)
+		logMsg := fmt.Sprintf("error occured decoding request body to RegisterRequest struct: %s", err)
+		respMsg := fmt.Sprintf("invalid registration data provided")
+
+		handlerutils.WriteResponseAndLogError(rw, uh.logger, http.StatusBadRequest, logMsg, respMsg)
+
 		return
 	}
 
 	err = uh.validator.Struct(registerReq)
 	if err != nil {
-		uh.logger.Errorf("error occured validating RegisterRequest struct: %s", err)
+		logMsg := fmt.Sprintf("error occurred validating RegisterRequest struct: %s", err)
+		respMsg := fmt.Sprintf("invalid registration data provided")
+
+		handlerutils.WriteResponseAndLogError(rw, uh.logger, http.StatusBadRequest, logMsg, respMsg)
+
 		return
 	}
 
@@ -71,11 +81,14 @@ func (uh *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := uh.UserService.RegisterUser(ctx, createModel)
 	if err != nil {
+		handlerutils.WriteResponseAndLogError(rw, uh.logger, http.StatusBadRequest, // todo: specify what user did wrong
+			"", "invalid registration data provided")
+
 		return
 	}
 
-	render.JSON(w, r, user)
-	w.WriteHeader(http.StatusCreated)
+	render.JSON(rw, req, user)
+	rw.WriteHeader(http.StatusCreated)
 }
 
 func (uh *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {

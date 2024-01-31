@@ -21,6 +21,9 @@ type UserService interface {
 	DeleteUser(ctx context.Context, id int) (*model.User, error)
 }
 
+// todo: AuthService to easily change auth mechanism, e.g AuthService.AuthWithBasic, AuthService.AuthWithJWT?
+// todo: or AuthBasicMiddleware and AuthJWTMiddleware
+
 func AuthMiddleware(userService UserService) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -43,7 +46,7 @@ func AuthMiddleware(userService UserService) Middleware {
 				return
 			}
 
-			ctx := context.WithValue(req.Context(), "user", user)
+			ctx := context.WithValue(req.Context(), "user", *user)
 			next.ServeHTTP(rw, req.WithContext(ctx))
 		})
 	}

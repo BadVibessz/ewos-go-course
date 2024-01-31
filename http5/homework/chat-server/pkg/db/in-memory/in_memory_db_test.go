@@ -1,10 +1,12 @@
 package in_memory
 
 import (
+	"context"
 	"testing"
 )
 
-var inMemDB = InMemDB{}
+var ctx, cancel = context.WithCancel(context.Background())
+var inMemDB = NewInMemDB(ctx, "db_save.json")
 
 func TestTableCreated(t *testing.T) { // todo: make it pass
 	inMemDB.Clear()
@@ -26,6 +28,15 @@ func TestGetExistingTable(t *testing.T) {
 	inMemDB.CreateTable(tableName)
 
 	_, err := inMemDB.GetTable(tableName)
+	if err != nil {
+		t.Fatal()
+	}
+
+	tableName = "new_table2"
+
+	inMemDB.CreateTable(tableName)
+
+	_, err = inMemDB.GetTable(tableName)
 	if err != nil {
 		t.Fatal()
 	}
