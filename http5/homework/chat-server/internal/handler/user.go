@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/requset"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/response"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/middleware"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 	handlerutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/handler"
+	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -15,17 +18,31 @@ import (
 	"net/http"
 )
 
-type UserHandler struct {
-	UserService middleware.UserService
-	logger      *logrus.Logger
-	validator   *validator.Validate
+type UserService interface {
+	RegisterUser(ctx context.Context, user dto.CreateUserDTO) (*model.User, error)
+	GetUserByID(ctx context.Context, id int) (*model.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
+	GetAllUsers(ctx context.Context) []*model.User
+	UpdateUser(ctx context.Context, id int, updateModel dto.UpdateUserDTO) (*model.User, error)
+	DeleteUser(ctx context.Context, id int) (*model.User, error)
 }
 
-func NewUserHandler(us middleware.UserService, logger *logrus.Logger) *UserHandler {
+type UserHandler struct {
+	UserService    UserService
+	MessageService MessageService
+	AuthService    middleware.AuthService
+	logger         *logrus.Logger
+	validator      *validator.Validate
+}
+
+func NewUserHandler(us UserService, ms MessageService, as middleware.AuthService, logger *logrus.Logger) *UserHandler {
 	return &UserHandler{
-		UserService: us,
-		logger:      logger,
-		validator:   validator.New(validator.WithRequiredStructEnabled()),
+		UserService:    us,
+		MessageService: ms,
+		AuthService:    as,
+		logger:         logger,
+		validator:      validator.New(validator.WithRequiredStructEnabled()),
 	}
 }
 
@@ -38,8 +55,9 @@ func (uh *UserHandler) Routes() chi.Router {
 	})
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(uh.UserService))
+		r.Use(middleware.AuthMiddleware(uh.AuthService))
 		r.Get("/all", uh.GetAll)
+		r.Get("/messages", uh.GetAllUsersThatSentMessage)
 	})
 
 	return router
@@ -87,15 +105,33 @@ func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) { // 
 		return
 	}
 
-	render.JSON(rw, req, user)
+	render.JSON(rw, req, response.UserToUserResponse(user))
 	rw.WriteHeader(http.StatusCreated)
 }
 
-func (uh *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	users := uh.UserService.GetAllUsers(ctx)
+func (uh *UserHandler) GetAll(rw http.ResponseWriter, req *http.Request) {
+	users := uh.UserService.GetAllUsers(req.Context())
+	resp := sliceutils.Map(users, func(user *model.User) response.UserResponse { return response.UserToUserResponse(user) })
 
-	render.JSON(w, r, users)
+	render.JSON(rw, req, resp)
 
-	w.WriteHeader(http.StatusOK)
+	rw.WriteHeader(http.StatusOK)
+}
+
+func (uh *UserHandler) GetAllUsersThatSentMessage(rw http.ResponseWriter, req *http.Request) {
+	user, ok := req.Context().Value("user").(model.User)
+	if !ok { // unauthorized
+		rw.WriteHeader(http.StatusUnauthorized)
+	}
+
+	messages := uh.MessageService.GetAllPrivateMessages(req.Context(), &user)
+
+	usersDuplicates := sliceutils.Map(messages, func(msg *model.PrivateMessage) *model.User { return msg.From })
+	users := sliceutils.Unique(usersDuplicates)
+
+	resp := sliceutils.Map(users, func(user *model.User) response.UserResponse { return response.UserToUserResponse(user) })
+
+	render.JSON(rw, req, resp)
+
+	rw.WriteHeader(http.StatusOK)
 }

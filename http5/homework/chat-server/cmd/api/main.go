@@ -10,6 +10,7 @@ import (
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/router"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"os"
@@ -55,6 +56,11 @@ func addDefaultDataInDB(ctx context.Context, us *service.UserService, ms *servic
 			Email:          "test2@mail.ru",
 			HashedPassword: "$2a$10$O3bRPhNaWgVibnpkUFL.K.xXwmYnDKKMJ1Ak4iavFrSnn8wAsgYPW",
 		},
+		{
+			Username:       "test3",
+			Email:          "test3@mail.ru",
+			HashedPassword: "$2a$10$lgQ9a71CwJQkAF1yUcKKl..RGDT4OaGRjyBAVFgGupkdMclmS7wMS",
+		},
 	}
 
 	for _, user := range users {
@@ -72,6 +78,10 @@ func addDefaultDataInDB(ctx context.Context, us *service.UserService, ms *servic
 		{
 			FromID:  2,
 			Content: "Hi Test, I'm Test2 ;)",
+		},
+		{
+			FromID:  3,
+			Content: "What's up! I'm Test3",
 		},
 	}
 
@@ -92,6 +102,17 @@ func addDefaultDataInDB(ctx context.Context, us *service.UserService, ms *servic
 			FromID:  2,
 			ToID:    1,
 			Content: "Ohh.. You are being tested too!",
+		},
+
+		{
+			FromID:  3,
+			ToID:    2,
+			Content: "Have something?",
+		},
+		{
+			FromID:  2,
+			ToID:    3,
+			Content: "What??.. Get off me!",
 		},
 	}
 
@@ -117,18 +138,23 @@ func main() {
 
 	userService := service.NewUserService(userRepo)
 	messageService := service.NewMessageService(privateMsgRepo, publicMsgRepo, userRepo)
+	authService := service.NewBasicAuthService(userRepo)
 
 	addDefaultDataInDB(ctx, userService, messageService)
 
-	userHandler := handler.NewUserHandler(userService, logger)
-	messageHandler := handler.NewMessageHandler(messageService, userService, logger)
+	userHandler := handler.NewUserHandler(userService, messageService, authService, logger)
+	messageHandler := handler.NewMessageHandler(messageService, userService, authService, logger)
 
 	routers := make(map[string]chi.Router)
 
 	routers["/users"] = userHandler.Routes()
 	routers["/messages"] = messageHandler.Routes()
 
-	r := router.MakeRoutes("/chat/api/v1", routers)
+	middlewares := []router.Middleware{
+		middleware.Recoverer,
+	}
+
+	r := router.MakeRoutes("/chat/api/v1", routers, middlewares)
 
 	server := http.Server{
 		Addr:    ":5000",

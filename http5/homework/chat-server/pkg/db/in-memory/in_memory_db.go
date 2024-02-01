@@ -33,7 +33,7 @@ func NewInMemDB(ctx context.Context, savePath string) (*InMemDB, <-chan any) {
 	wg.Add(1)
 	go func() {
 		<-ctx.Done()
-		db.Save(savePath, &wg, savedChan) // TODO: UNDERSTAND HOW TO SAVE (not falling into this func)
+		db.Save(savePath, &wg, savedChan)
 	}()
 
 	return &db, savedChan

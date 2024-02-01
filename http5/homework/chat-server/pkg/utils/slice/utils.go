@@ -31,3 +31,18 @@ func Map[T any, V any](s []T, f func(T) V) []V {
 
 	return res
 }
+
+func Unique[T comparable](s []T) []T {
+	visited := make(map[T]bool)
+	res := make([]T, 0, len(s))
+
+	for _, elem := range s {
+		_, ok := visited[elem]
+		if !ok {
+			visited[elem] = true
+			res = append(res, elem)
+		}
+	}
+
+	return res
+}

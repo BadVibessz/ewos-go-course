@@ -39,17 +39,21 @@ type MessageService interface {
 	DeletePublicMessage(ctx context.Context, id int) (*model.PublicMessage, error)
 }
 
+const defaultLimit = 10
+
 type MessageHandler struct {
 	MessageService MessageService
-	UserService    middleware.UserService
+	UserService    UserService
+	AuthService    middleware.AuthService
 	logger         *logrus.Logger
 	validator      *validator.Validate
 }
 
-func NewMessageHandler(ms MessageService, us middleware.UserService, logger *logrus.Logger) *MessageHandler {
+func NewMessageHandler(ms MessageService, us UserService, as middleware.AuthService, logger *logrus.Logger) *MessageHandler {
 	return &MessageHandler{
 		MessageService: ms,
 		UserService:    us,
+		AuthService:    as,
 		logger:         logger,
 		validator:      validator.New(validator.WithRequiredStructEnabled()),
 	}
@@ -59,7 +63,7 @@ func (mh *MessageHandler) Routes() chi.Router {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(mh.UserService))
+		r.Use(middleware.AuthMiddleware(mh.AuthService))
 
 		r.Get("/public", mh.GetAllPublicMessages)
 		r.Post("/public", mh.SendPublicMessage)
@@ -74,9 +78,28 @@ func (mh *MessageHandler) Routes() chi.Router {
 }
 
 func (mh *MessageHandler) GetAllPublicMessages(w http.ResponseWriter, req *http.Request) {
-	msgs := mh.MessageService.GetAllPublicMessages(req.Context())
+	messages := mh.MessageService.GetAllPublicMessages(req.Context())
 
-	resp := sliceutils.Map(msgs, func(msg *model.PublicMessage) response.PublicMessageResponse {
+	page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+	if page == 0 {
+		page = 1
+	}
+
+	limit, _ := strconv.Atoi(req.URL.Query().Get("limit"))
+	if limit == 0 {
+		limit = defaultLimit
+	}
+
+	leftBound := page*limit - limit
+	rightBound := leftBound + limit - 1
+
+	if rightBound >= len(messages) {
+		rightBound = len(messages) - 1
+	}
+
+	messages = messages[leftBound:rightBound]
+
+	resp := sliceutils.Map(messages[leftBound:rightBound+1], func(msg *model.PublicMessage) response.PublicMessageResponse {
 		return response.PublicMsgRespFromMessage(*msg)
 	})
 
@@ -192,6 +215,25 @@ func (mh *MessageHandler) GetAllPrivateMessages(rw http.ResponseWriter, req *htt
 
 	messages := mh.MessageService.GetAllPrivateMessages(req.Context(), &user)
 
+	page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+	if page == 0 {
+		page = 1
+	}
+
+	limit, _ := strconv.Atoi(req.URL.Query().Get("limit"))
+	if limit == 0 {
+		limit = defaultLimit
+	}
+
+	leftBound := page*limit - limit
+	rightBound := leftBound + limit - 1
+
+	if rightBound >= len(messages) {
+		rightBound = len(messages) - 1
+	}
+
+	messages = messages[leftBound:rightBound]
+
 	resp := sliceutils.Map(messages, func(msg *model.PrivateMessage) response.PrivateMessageResponse {
 		return response.PrivateMsgRespFromMessage(*msg)
 	})
@@ -206,15 +248,18 @@ func (mh *MessageHandler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, 
 		rw.WriteHeader(http.StatusUnauthorized)
 	}
 
-	fromID, err := strconv.Atoi(req.URL.Query().Get("id")) // todo
+	ctx := req.Context()
+
+	fromID, err := strconv.Atoi(chi.URLParam(req, "id"))
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
 	}
 
-	messages := mh.MessageService.GetAllPrivateMessagesFromUser(req.Context(), &user, fromID)
+	messages := mh.MessageService.GetAllPrivateMessagesFromUser(ctx, &user, fromID)
 
 	resp := sliceutils.Map(messages, func(msg *model.PrivateMessage) response.PrivateMessageResponse {
 		return response.PrivateMsgRespFromMessage(*msg)
+
 	})
 
 	render.JSON(rw, req, resp)

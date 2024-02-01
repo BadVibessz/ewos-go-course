@@ -6,9 +6,9 @@ import (
 )
 
 var ctx, cancel = context.WithCancel(context.Background())
-var inMemDB = NewInMemDB(ctx, "db_save.json")
+var inMemDB, _ = NewInMemDB(ctx, "db_save.json")
 
-func TestTableCreated(t *testing.T) { // todo: make it pass
+func TestTableCreated(t *testing.T) {
 	inMemDB.Clear()
 
 	tableName := "new_table"

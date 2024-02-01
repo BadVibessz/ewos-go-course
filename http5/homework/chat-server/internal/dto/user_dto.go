@@ -11,3 +11,8 @@ type UpdateUserDTO struct {
 	NewUsername       string
 	NewHashedPassword string
 }
+
+type LoginUserDTO struct {
+	Username string
+	Password string
+}

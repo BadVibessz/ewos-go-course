@@ -3,13 +3,17 @@ package router
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"net/http"
 )
 
-func MakeRoutes(basePath string, routers map[string]chi.Router) chi.Router {
+type Middleware = func(next http.Handler) http.Handler
+
+func MakeRoutes(basePath string, routers map[string]chi.Router, middlewares []Middleware) chi.Router {
 	r := chi.NewRouter()
 
-	r.Use(middleware.Recoverer)
+	for _, middleware := range middlewares {
+		r.Use(middleware)
+	}
 
 	for routerPath, router := range routers {
 		r.Mount(fmt.Sprintf("%s%s", basePath, routerPath), router)

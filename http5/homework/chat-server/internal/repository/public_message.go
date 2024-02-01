@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -63,6 +64,8 @@ func (pr *PublicMessageInMemRepo) GetAllPublicMessages(ctx context.Context) []*m
 			res = append(res, &msg)
 		}
 	}
+
+	sort.Slice(res, func(i, j int) bool { return res[i].SentAt.Before(res[j].SentAt) })
 
 	return res
 }
