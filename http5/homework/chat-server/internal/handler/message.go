@@ -40,6 +40,7 @@ type MessageService interface {
 }
 
 const defaultLimit = 10
+const defaultPage = 0
 
 type MessageHandler struct {
 	MessageService MessageService
@@ -77,29 +78,21 @@ func (mh *MessageHandler) Routes() chi.Router {
 	return router
 }
 
+// GetAllPublicMessages godoc
+// @Summary      Get all public messages
+// @Description  Get all public messages that were sent to chat
+// @Security 	 BasicAuth
+// @Tags         Message
+// @Produce      json
+// @Success      200  {object}  []response.PublicMessageResponse
+// @Failure 	 401  {string}  Unauthorized
+// @Router       /messages/public [get]
 func (mh *MessageHandler) GetAllPublicMessages(w http.ResponseWriter, req *http.Request) {
 	messages := mh.MessageService.GetAllPublicMessages(req.Context())
+	messages = handlerutils.Paginate(req, defaultPage, defaultLimit, messages)
 
-	page, _ := strconv.Atoi(req.URL.Query().Get("page"))
-	if page == 0 {
-		page = 1
-	}
-
-	limit, _ := strconv.Atoi(req.URL.Query().Get("limit"))
-	if limit == 0 {
-		limit = defaultLimit
-	}
-
-	leftBound := page*limit - limit
-	rightBound := leftBound + limit - 1
-
-	if rightBound >= len(messages) {
-		rightBound = len(messages) - 1
-	}
-
-	messages = messages[leftBound:rightBound]
-
-	resp := sliceutils.Map(messages[leftBound:rightBound+1], func(msg *model.PublicMessage) response.PublicMessageResponse {
+	// TODO: TEST!!
+	resp := sliceutils.Map(messages, func(msg *model.PublicMessage) response.PublicMessageResponse {
 		return response.PublicMsgRespFromMessage(*msg)
 	})
 
@@ -108,6 +101,17 @@ func (mh *MessageHandler) GetAllPublicMessages(w http.ResponseWriter, req *http.
 	w.WriteHeader(http.StatusOK)
 }
 
+// SendPublicMessage godoc
+// @Summary      Send public message to chat
+// @Description  Send public message to chat
+// @Security 	 BasicAuth
+// @Tags         Message
+// @Accept	  	 json
+// @Produce      json
+// @Param input  body request.SendPublicMessageRequest true "public message schema"
+// @Success      200  {object}  []response.PublicMessageResponse
+// @Failure 	 401  {string}  Unauthorized
+// @Router       /messages/public [post]
 func (mh *MessageHandler) SendPublicMessage(rw http.ResponseWriter, req *http.Request) {
 	user, ok := req.Context().Value("user").(model.User)
 	if !ok { // unauthorized
@@ -157,6 +161,18 @@ func (mh *MessageHandler) SendPublicMessage(rw http.ResponseWriter, req *http.Re
 	rw.WriteHeader(http.StatusCreated)
 }
 
+// SendPrivateMessage godoc
+// @Summary      Send private message to user
+// @Description  Send private message to user
+// @Security 	 BasicAuth
+// @Tags         Message
+// @Accept	  	 json
+// @Produce      json
+// @Param input  body request.SendPrivateMessageRequest true "private message schema"
+// @Success      200  {object}  []response.PrivateMessageResponse
+// @Failure 	 401  {string}  Unauthorized
+// @Failure 	 400  {string}  invalid message provided
+// @Router       /messages/private [post]
 func (mh *MessageHandler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) {
 	user, ok := req.Context().Value("user").(model.User)
 	if !ok { // unauthorized
@@ -207,6 +223,15 @@ func (mh *MessageHandler) SendPrivateMessage(rw http.ResponseWriter, req *http.R
 	rw.WriteHeader(http.StatusCreated)
 }
 
+// GetAllPrivateMessages godoc
+// @Summary      Get all private messages
+// @Description  Get all private messages that were sent to chat
+// @Security 	 BasicAuth
+// @Tags         Message
+// @Produce      json
+// @Success      200  {object}  []response.PrivateMessageResponse
+// @Failure 	 401  {string}  Unauthorized
+// @Router       /messages/private [get]
 func (mh *MessageHandler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Request) {
 	user, ok := req.Context().Value("user").(model.User)
 	if !ok { // unauthorized
@@ -214,25 +239,7 @@ func (mh *MessageHandler) GetAllPrivateMessages(rw http.ResponseWriter, req *htt
 	}
 
 	messages := mh.MessageService.GetAllPrivateMessages(req.Context(), &user)
-
-	page, _ := strconv.Atoi(req.URL.Query().Get("page"))
-	if page == 0 {
-		page = 1
-	}
-
-	limit, _ := strconv.Atoi(req.URL.Query().Get("limit"))
-	if limit == 0 {
-		limit = defaultLimit
-	}
-
-	leftBound := page*limit - limit
-	rightBound := leftBound + limit - 1
-
-	if rightBound >= len(messages) {
-		rightBound = len(messages) - 1
-	}
-
-	messages = messages[leftBound:rightBound]
+	messages = handlerutils.Paginate(req, defaultPage, defaultLimit, messages)
 
 	resp := sliceutils.Map(messages, func(msg *model.PrivateMessage) response.PrivateMessageResponse {
 		return response.PrivateMsgRespFromMessage(*msg)
@@ -242,6 +249,16 @@ func (mh *MessageHandler) GetAllPrivateMessages(rw http.ResponseWriter, req *htt
 	rw.WriteHeader(http.StatusOK)
 }
 
+// GetAllPrivateMessagesFromUser godoc
+// @Summary      Get all private messages from user
+// @Description  Get all private messages from user
+// @Security 	 BasicAuth
+// @Tags         Message
+// @Produce      json
+// @Param 		 user_id  path int true "User ID"
+// @Success      200  {object}  []response.PrivateMessageResponse
+// @Failure 	 401  {string}  Unauthorized
+// @Router       /messages/private/{user_id} [get]
 func (mh *MessageHandler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, req *http.Request) {
 	user, ok := req.Context().Value("user").(model.User)
 	if !ok { // unauthorized
@@ -256,10 +273,10 @@ func (mh *MessageHandler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, 
 	}
 
 	messages := mh.MessageService.GetAllPrivateMessagesFromUser(ctx, &user, fromID)
+	messages = handlerutils.Paginate(req, defaultPage, defaultLimit, messages)
 
 	resp := sliceutils.Map(messages, func(msg *model.PrivateMessage) response.PrivateMessageResponse {
 		return response.PrivateMsgRespFromMessage(*msg)
-
 	})
 
 	render.JSON(rw, req, resp)

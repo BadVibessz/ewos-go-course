@@ -126,6 +126,7 @@ func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) { // 
 // @Tags         User
 // @Produce      json
 // @Success      200  {object}  []response.UserResponse
+// @Failure 	 401  {string}  Unauthorized
 // @Router       /users/all [get]
 func (uh *UserHandler) GetAll(rw http.ResponseWriter, req *http.Request) {
 	users := uh.UserService.GetAllUsers(req.Context())
@@ -136,6 +137,15 @@ func (uh *UserHandler) GetAll(rw http.ResponseWriter, req *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
+// GetAllUsersThatSentMessage godoc
+// @Summary      Get all users that sent message to current user
+// @Description  Get all users that sent message to current user
+// @Security 	 BasicAuth
+// @Tags         User
+// @Produce      json
+// @Success      200  {object}  []response.UserResponse
+// @Failure 	 401  {string}  Unauthorized
+// @Router       /users/messages [get]
 func (uh *UserHandler) GetAllUsersThatSentMessage(rw http.ResponseWriter, req *http.Request) {
 	user, ok := req.Context().Value("user").(model.User)
 	if !ok { // unauthorized

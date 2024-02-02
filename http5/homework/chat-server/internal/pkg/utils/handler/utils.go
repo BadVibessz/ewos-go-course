@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 )
 
 func WriteResponseAndLogError(rw http.ResponseWriter, logger *logrus.Logger, statusCode int, logMsg string, respMsg string) {
@@ -18,4 +19,25 @@ func WriteResponseAndLogError(rw http.ResponseWriter, logger *logrus.Logger, sta
 			logger.Errorf("error occurred writing response: %s", err)
 		}
 	}
+}
+
+func Paginate[T any](req *http.Request, defaultPage int, defaultLimit int, s []T) []T {
+	page, _ := strconv.Atoi(req.URL.Query().Get("page"))
+	if page == 0 {
+		page = defaultPage
+	}
+
+	limit, _ := strconv.Atoi(req.URL.Query().Get("limit"))
+	if limit == 0 {
+		limit = defaultLimit
+	}
+
+	leftBound := page*limit - limit
+	rightBound := leftBound + limit - 1
+
+	if rightBound >= len(s) {
+		rightBound = len(s) - 1
+	}
+
+	return s[leftBound:rightBound]
 }
