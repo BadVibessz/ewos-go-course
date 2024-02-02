@@ -1,0 +1,286 @@
+basePath: /chat/api/v1
+definitions:
+  request.RegisterRequest:
+    properties:
+      confirm_password:
+        type: string
+      email:
+        type: string
+      password:
+        maxLength: 128
+        minLength: 8
+        type: string
+      username:
+        type: string
+    required:
+    - confirm_password
+    - email
+    - password
+    - username
+    type: object
+  request.SendPrivateMessageRequest:
+    properties:
+      content:
+        maxLength: 2000
+        minLength: 1
+        type: string
+      to_id:
+        type: integer
+    required:
+    - content
+    type: object
+  request.SendPublicMessageRequest:
+    properties:
+      content:
+        maxLength: 2000
+        minLength: 1
+        type: string
+    required:
+    - content
+    type: object
+  response.PrivateMessageResponse:
+    properties:
+      content:
+        type: string
+      edited_at:
+        type: string
+      from_username:
+        type: string
+      sent_at:
+        type: string
+      to_username:
+        type: string
+    type: object
+  response.PublicMessageResponse:
+    properties:
+      content:
+        type: string
+      edited_at:
+        type: string
+      from_username:
+        type: string
+      sent_at:
+        type: string
+    type: object
+  response.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: API Server for Web Chat
+  title: Chat API
+  version: "1.0"
+paths:
+  /messages/private:
+    get:
+      description: Get all private messages that were sent to chat
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/response.PrivateMessageResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      summary: Get all private messages
+      tags:
+      - Message
+    post:
+      consumes:
+      - application/json
+      description: Send private message to user
+      parameters:
+      - description: private message schema
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.SendPrivateMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/response.PrivateMessageResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      summary: Send private message to user
+      tags:
+      - Message
+  /messages/private/user/{user_id}:
+    get:
+      description: Get all private messages from user
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/response.PrivateMessageResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      summary: Get all private messages from user
+      tags:
+      - Message
+  /messages/public:
+    get:
+      description: Get all public messages that were sent to chat
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/response.PublicMessageResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      summary: Get all public messages
+      tags:
+      - Message
+    post:
+      consumes:
+      - application/json
+      description: Send public message to chat
+      parameters:
+      - description: public message schema
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.SendPublicMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/response.PublicMessageResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      summary: Send public message to chat
+      tags:
+      - Message
+  /users/all:
+    get:
+      description: Get all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/response.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      summary: Get all users
+      tags:
+      - User
+  /users/messages:
+    get:
+      description: Get all users that sent message to current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/response.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            type: string
+      security:
+      - BasicAuth: []
+      summary: Get all users that sent message to current user
+      tags:
+      - User
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      description: to register new user
+      parameters:
+      - description: registration info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.RegisterRequest'
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Register new user
+      tags:
+      - User
+securityDefinitions:
+  BasicAuth:
+    type: basic
+swagger: "2.0"

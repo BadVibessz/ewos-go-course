@@ -40,7 +40,7 @@ type MessageService interface {
 }
 
 const defaultLimit = 10
-const defaultPage = 0
+const defaultPage = 1
 
 type MessageHandler struct {
 	MessageService MessageService
@@ -256,9 +256,10 @@ func (mh *MessageHandler) GetAllPrivateMessages(rw http.ResponseWriter, req *htt
 // @Tags         Message
 // @Produce      json
 // @Param 		 user_id  path int true "User ID"
+// @Para		 page query int true "page"
 // @Success      200  {object}  []response.PrivateMessageResponse
 // @Failure 	 401  {string}  Unauthorized
-// @Router       /messages/private/{user_id} [get]
+// @Router       /messages/private/user/{user_id} [get]
 func (mh *MessageHandler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, req *http.Request) {
 	user, ok := req.Context().Value("user").(model.User)
 	if !ok { // unauthorized

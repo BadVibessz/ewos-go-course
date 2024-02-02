@@ -33,10 +33,10 @@ func Paginate[T any](req *http.Request, defaultPage int, defaultLimit int, s []T
 	}
 
 	leftBound := page*limit - limit
-	rightBound := leftBound + limit - 1
+	rightBound := leftBound + limit
 
 	if rightBound >= len(s) {
-		rightBound = len(s) - 1
+		rightBound = len(s)
 	}
 
 	return s[leftBound:rightBound]

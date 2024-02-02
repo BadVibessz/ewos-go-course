@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
@@ -12,12 +13,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	_ "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/cmd/api/docs"
+	_ "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/docs"
 )
 
 // @title Chat API
@@ -30,7 +32,10 @@ import (
 // @in header
 // @name Authorization
 
-const dbSavePath = "http5/homework/chat-server/internal/db/db_state.json"
+const ( // todo: config file
+	dbSavePath = "http5/homework/chat-server/internal/db/db_state.json"
+	port       = 5000
+)
 
 func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	var inMemDB *inmemory.InMemDB
@@ -169,16 +174,23 @@ func main() {
 	r := router.MakeRoutes("/chat/api/v1", routers, middlewares)
 
 	server := http.Server{
-		Addr:    ":5000",
+		Addr:    fmt.Sprintf(":%v", port),
 		Handler: r,
 	}
 
-	logger.Infof("server started at %v", server.Addr)
+	// add swagger middleware
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL(fmt.Sprintf("http://localhost:%v/swagger/doc.json", port)), //The url pointing to API definition
+	))
+
+	logger.Infof("server started at port %v", server.Addr)
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			logger.WithError(err).Fatalf("server can't listen requests")
 		}
 	}()
+
+	logger.Infof("documentation available on: http://localhost:%v/swagger/index.html", port)
 
 	interrupt := make(chan os.Signal)
 
