@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/requset"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/response"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/middleware"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
@@ -114,7 +114,7 @@ func (mh *MessageHandler) SendPublicMessage(rw http.ResponseWriter, req *http.Re
 		rw.WriteHeader(http.StatusUnauthorized)
 	}
 
-	var pubMsgReq requset.SendPublicMessageRequest
+	var pubMsgReq request.SendPublicMessageRequest
 
 	err := render.DecodeJSON(req.Body, &pubMsgReq)
 	if err != nil {
@@ -163,7 +163,7 @@ func (mh *MessageHandler) SendPrivateMessage(rw http.ResponseWriter, req *http.R
 		rw.WriteHeader(http.StatusUnauthorized)
 	}
 
-	var privMsgReq requset.SendPrivateMessageRequest
+	var privMsgReq request.SendPrivateMessageRequest
 
 	err := render.DecodeJSON(req.Body, &privMsgReq)
 	if err != nil {

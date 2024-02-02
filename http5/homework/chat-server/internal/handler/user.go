@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/requset"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/response"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/middleware"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
@@ -63,8 +63,18 @@ func (uh *UserHandler) Routes() chi.Router {
 	return router
 }
 
+// Register godoc
+// @Summary      Register new user
+// @Description  to register new user
+// @Tags         User
+// @Accept       json
+// @Produce      plain
+// @Param input  body request.RegisterRequest true "registration info"
+// @Success      200  {object}  response.UserResponse
+// @Failure 	 400 {string}	invalid registration data provided
+// @Router       /users/register [post]
 func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) { // TODO: PANIC IF TRYING REGISTER 2nd USER
-	registerReq := requset.RegisterRequest{}
+	registerReq := request.RegisterRequest{}
 	err := render.DecodeJSON(req.Body, &registerReq)
 	if err != nil {
 		logMsg := fmt.Sprintf("error occured decoding request body to RegisterRequest struct: %s", err)
@@ -109,6 +119,14 @@ func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) { // 
 	rw.WriteHeader(http.StatusCreated)
 }
 
+// GetAll godoc
+// @Summary      Get all users
+// @Description  Get all users
+// @Security 	 BasicAuth
+// @Tags         User
+// @Produce      json
+// @Success      200  {object}  []response.UserResponse
+// @Router       /users/all [get]
 func (uh *UserHandler) GetAll(rw http.ResponseWriter, req *http.Request) {
 	users := uh.UserService.GetAllUsers(req.Context())
 	resp := sliceutils.Map(users, func(user *model.User) response.UserResponse { return response.UserToUserResponse(user) })

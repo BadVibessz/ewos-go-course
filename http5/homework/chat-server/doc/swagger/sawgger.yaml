@@ -1,0 +1,130 @@
+basePath: /trade-bot/api/v1
+definitions:
+  baseresponse.ErrResponse:
+    properties:
+      error:
+        description: application-level error message, for debugging
+        type: string
+    type: object
+  request.SignIn:
+    properties:
+      password:
+        type: string
+    type: object
+  request.SignUp:
+    properties:
+      name:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  response.SignIn:
+    properties:
+      accessToken:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: API Server for Trade-bot Application
+  title: Trade-bot API
+  version: "1.0"
+paths:
+  /auth/logout:
+    delete:
+      description: method stands for logging out user
+      operationId: logout-user
+      responses:
+        "204":
+          description: ok
+        "400":
+          description: bad request
+          schema:
+            $ref: '#/definitions/baseresponse.ErrResponse'
+        "404":
+          description: not found
+          schema:
+            $ref: '#/definitions/baseresponse.ErrResponse'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/baseresponse.ErrResponse'
+      security:
+        - ApiKeyAuth: []
+      summary: logout user
+      tags:
+        - auth
+  /auth/sign-in:
+    post:
+      consumes:
+        - application/json
+      description: method stands for signing in user
+      operationId: sign-in-user
+      parameters:
+        - description: user uid
+          in: query
+          name: uid
+          required: true
+          type: string
+        - description: credentials
+          in: body
+          name: input
+          required: true
+          schema:
+            $ref: '#/definitions/request.SignIn'
+      produces:
+        - application/json
+      responses:
+        "200":
+          description: access token
+          schema:
+            $ref: '#/definitions/response.SignIn'
+        "400":
+          description: bad request
+          schema:
+            $ref: '#/definitions/baseresponse.ErrResponse'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/baseresponse.ErrResponse'
+      summary: sign in user
+      tags:
+        - auth
+  /auth/sign-up:
+    post:
+      consumes:
+        - application/json
+      description: method stands for signing up user
+      operationId: sign-up-user
+      parameters:
+        - description: account info
+          in: body
+          name: input
+          required: true
+          schema:
+            $ref: '#/definitions/request.SignUp'
+      responses:
+        "201":
+          description: successfully create user
+          headers:
+            Location:
+              description: user uid
+              type: string
+        "400":
+          description: bad request
+          schema:
+            $ref: '#/definitions/baseresponse.ErrResponse'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/baseresponse.ErrResponse'
+      summary: sign up user
+      tags:
+        - auth
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

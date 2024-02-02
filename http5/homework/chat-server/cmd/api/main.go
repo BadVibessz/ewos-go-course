@@ -16,7 +16,19 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	_ "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/cmd/api/docs"
 )
+
+// @title Chat API
+// @version 1.0
+// @description API Server for Web Chat
+
+// @BasePath /chat/api/v1
+
+// @securityDefinitions.basic BasicAuth
+// @in header
+// @name Authorization
 
 const dbSavePath = "http5/homework/chat-server/internal/db/db_state.json"
 
