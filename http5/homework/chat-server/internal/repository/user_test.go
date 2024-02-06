@@ -2,8 +2,8 @@ package repository
 
 import (
 	"context"
+	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 	"math"
-	"slices"
 	"testing"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
@@ -73,8 +73,18 @@ func TestGetAllUsersPositive(t *testing.T) {
 		t.Fatal()
 	}
 
-	if !slices.Contains(got, created1) || !slices.Contains(got, created2) {
+	if !sliceutils.ContainsValue(got, *created1) || !sliceutils.ContainsValue(got, *created2) {
 		t.Fatal()
+	}
+
+	_, err = repo.DeleteUser(ctx, created1.ID)
+	if err != nil {
+		t.Fatal("cannot delete user")
+	}
+
+	_, err = repo.DeleteUser(ctx, created2.ID)
+	if err != nil {
+		t.Fatal("cannot delete user")
 	}
 }
 
@@ -98,6 +108,11 @@ func TestGetUserByIdPositive(t *testing.T) {
 	if *got != *created {
 		t.Fatalf("expected user not equals to actual")
 	}
+
+	_, err = repo.DeleteUser(ctx, created.ID)
+	if err != nil {
+		t.Fatal("cannot delete user")
+	}
 }
 
 func TestGetUserByEmailPositive(t *testing.T) {
@@ -120,6 +135,11 @@ func TestGetUserByEmailPositive(t *testing.T) {
 	if *got != *created {
 		t.Fatalf("expected user not equals to actual")
 	}
+
+	_, err = repo.DeleteUser(ctx, created.ID)
+	if err != nil {
+		t.Fatal("cannot delete user")
+	}
 }
 
 func TestGetUserByUsernamePositive(t *testing.T) {
@@ -141,5 +161,10 @@ func TestGetUserByUsernamePositive(t *testing.T) {
 
 	if *got != *created {
 		t.Fatalf("expected user not equals to actual")
+	}
+
+	_, err = repo.DeleteUser(ctx, created.ID)
+	if err != nil {
+		t.Fatal("cannot delete user")
 	}
 }

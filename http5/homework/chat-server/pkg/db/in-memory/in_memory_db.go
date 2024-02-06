@@ -222,13 +222,13 @@ func (db *InMemDB) GetRowsCount(table string) (int, error) {
 }
 
 func (db *InMemDB) DropRow(table string, identifier string) error {
-	db.m.Lock()
-	defer db.m.Unlock()
-
 	t, err := db.GetTable(table)
 	if err != nil {
 		return err
 	}
+
+	db.m.Lock()
+	defer db.m.Unlock()
 
 	t.Delete(identifier)
 

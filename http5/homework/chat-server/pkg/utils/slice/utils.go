@@ -48,3 +48,13 @@ func Slice[T any](s []T, offset int, limit int) []T {
 
 	return s[leftBound:rightBound]
 }
+
+func ContainsValue[T comparable](ss []*T, v T) bool {
+	for _, s := range ss {
+		if *s == v {
+			return true
+		}
+	}
+
+	return false
+}

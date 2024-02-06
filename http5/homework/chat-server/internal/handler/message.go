@@ -2,7 +2,9 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service"
 	"net/http"
 	"strconv"
 
@@ -31,7 +33,7 @@ type MessageService interface {
 	GetAllPrivateMessages(ctx context.Context, userFromID int, offset, limit int) []*model.PrivateMessage
 	GetAllPublicMessages(ctx context.Context, offset, limit int) []*model.PublicMessage
 
-	GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) []*model.PrivateMessage
+	GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) ([]*model.PrivateMessage, error)
 
 	UpdatePrivateMessage(ctx context.Context, id int, newContent string) (*model.PrivateMessage, error)
 	UpdatePublicMessage(ctx context.Context, id int, newContent string) (*model.PublicMessage, error)
@@ -215,10 +217,18 @@ func (mh *MessageHandler) SendPrivateMessage(rw http.ResponseWriter, req *http.R
 	}
 
 	message, err := mh.MessageService.SendPrivateMessage(req.Context(), msg)
-	if err != nil {
-		logMsg := fmt.Sprintf("error occurred saving private message: %s", err)
+	if errors.Is(err, service.ErrNoSuchReceiver) {
+		logMsg := fmt.Sprintf("error occurred sending private message: %s", err)
+		respMsg := fmt.Sprintf("error occurred sending private message: %s", err)
 
-		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusInternalServerError, logMsg, "")
+		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, logMsg, respMsg)
+
+		return
+	} else if err != nil {
+		logMsg := fmt.Sprintf("error occurred saving private message: %s", err)
+		respMsg := fmt.Sprintf("error occurred saving private message: %s", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusInternalServerError, logMsg, respMsg)
 
 		return
 	}
@@ -283,7 +293,15 @@ func (mh *MessageHandler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, 
 
 	offset, limit := handlerutils.GetOffsetAndLimitFromQuery(req, defaultOffset, defaultLimit)
 
-	messages := mh.MessageService.GetAllPrivateMessagesFromUser(ctx, id, fromID, offset, limit)
+	messages, err := mh.MessageService.GetAllPrivateMessagesFromUser(ctx, id, fromID, offset, limit)
+	if err != nil {
+		logMsg := fmt.Sprintf("error occurred getting private messages from user: %s", err)
+		respMsg := fmt.Sprintf("error occurred getting private messages from user: %s", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, logMsg, respMsg)
+
+		return
+	}
 
 	resp := sliceutils.Map(messages, messagemapper.MapPrivateMessageToPrivateMsgResp)
 

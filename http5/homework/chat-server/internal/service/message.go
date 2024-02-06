@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"math"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
@@ -37,6 +38,11 @@ type UserRepoMsgService interface {
 	CheckUniqueConstraints(ctx context.Context, email, username string) error
 }
 
+var (
+	ErrNoSuchReceiver = errors.New("no such receiver")
+	ErrNoSuchSender   = errors.New("no such sender")
+)
+
 type MessageService struct {
 	PrivateMessageRepo PrivateMessageRepo
 	PublicMessageRepo  PublicMessageRepo
@@ -54,12 +60,12 @@ func NewMessageService(pr PrivateMessageRepo, pb PublicMessageRepo, ur UserRepoM
 func (ms *MessageService) SendPrivateMessage(ctx context.Context, createModel dto.PrivateMessageDTO) (*model.PrivateMessage, error) {
 	userFrom, err := ms.UserRepo.GetUserByID(ctx, createModel.FromID)
 	if err != nil {
-		return nil, err
+		return nil, ErrNoSuchSender
 	}
 
 	userTo, err := ms.UserRepo.GetUserByID(ctx, createModel.ToID)
 	if err != nil {
-		return nil, err
+		return nil, ErrNoSuchReceiver
 	}
 
 	msg := model.PrivateMessage{
@@ -114,11 +120,16 @@ func (ms *MessageService) GetAllPrivateMessages(ctx context.Context, userToID in
 	return sliceutils.Slice(messages, offset, limit)
 }
 
-func (ms *MessageService) GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) []*model.PrivateMessage {
+func (ms *MessageService) GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) ([]*model.PrivateMessage, error) {
+	_, err := ms.UserRepo.GetUserByID(ctx, fromID)
+	if err != nil {
+		return nil, err
+	}
+
 	messages := ms.PrivateMessageRepo.GetAllPrivateMessages(ctx, 0, math.MaxInt64)
 	messages = sliceutils.Filter(messages, func(msg *model.PrivateMessage) bool { return msg.From.ID == fromID && msg.To.ID == toID })
 
-	return sliceutils.Slice(messages, offset, limit)
+	return sliceutils.Slice(messages, offset, limit), nil
 }
 
 func (ms *MessageService) GetPublicMessage(ctx context.Context, id int) (*model.PublicMessage, error) {

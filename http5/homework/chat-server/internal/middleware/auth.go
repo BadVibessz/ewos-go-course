@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -14,6 +15,11 @@ import (
 
 type Middleware = func(http.Handler) http.Handler
 
+var (
+	ErrNullUsername = errors.New("empty username provided")
+	ErrNullPassword = errors.New("empty password provided")
+)
+
 type AuthService interface {
 	Login(ctx context.Context, username, password string) (*model.User, error)
 }
@@ -24,6 +30,24 @@ func AuthMiddleware(authService AuthService, logger *logrus.Logger) Middleware {
 			username, pass, ok := req.BasicAuth()
 			if !ok {
 				rw.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+
+			if username == "" {
+				logMsg := fmt.Sprintf("error occurred while logging user: %s", ErrNullUsername)
+				respMsg := fmt.Sprintf("error occurred while logging user: %s", ErrNullUsername)
+
+				handlerutils.WriteErrResponseAndLog(rw, logger, http.StatusUnauthorized, logMsg, respMsg)
+
+				return
+			}
+
+			if pass == "" {
+				logMsg := fmt.Sprintf("error occurred while logging user: %s", ErrNullPassword)
+				respMsg := fmt.Sprintf("error occurred while logging user: %s", ErrNullPassword)
+
+				handlerutils.WriteErrResponseAndLog(rw, logger, http.StatusUnauthorized, logMsg, respMsg)
+
 				return
 			}
 

@@ -51,7 +51,7 @@ func (ur *UserRepoInMemDB) GetAllUsers(_ context.Context, offset, limit int) []*
 	return res
 }
 
-func (ur *UserRepoInMemDB) AddUser(_ context.Context, user model.User) (*model.User, error) { // todo: how to use context?
+func (ur *UserRepoInMemDB) AddUser(_ context.Context, user model.User) (*model.User, error) {
 	idOffset, err := ur.DB.GetRowsCount(userTableName)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (ur *UserRepoInMemDB) AddUser(_ context.Context, user model.User) (*model.U
 func (ur *UserRepoInMemDB) GetUserByID(_ context.Context, id int) (*model.User, error) {
 	row, err := ur.DB.GetRow(userTableName, strconv.Itoa(id))
 	if err != nil {
-		return nil, err
+		return nil, ErrNoSuchUser
 	}
 
 	user, ok := row.(model.User)
@@ -152,12 +152,12 @@ func (ur *UserRepoInMemDB) UpdateUser(ctx context.Context, id int, updated model
 
 func (ur *UserRepoInMemDB) CheckUniqueConstraints(ctx context.Context, email, username string) error {
 	got, err := ur.GetUserByEmail(ctx, email)
-	if got != nil || err != nil {
+	if got != nil || err == nil {
 		return ErrEmailExists
 	}
 
 	got, err = ur.GetUserByUsername(ctx, username)
-	if got != nil || err != nil {
+	if got != nil || err == nil {
 		return ErrUsernameExists
 	}
 
