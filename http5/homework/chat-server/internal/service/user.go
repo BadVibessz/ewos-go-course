@@ -2,57 +2,40 @@ package service
 
 import (
 	"context"
-	"errors"
+
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+
+	usermapper "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/mapper/user"
 )
 
-type UserRepo interface {
+type UserRepoUserService interface {
 	AddUser(ctx context.Context, user model.User) (*model.User, error)
 	GetUserByID(ctx context.Context, id int) (*model.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
-	GetAllUsers(ctx context.Context) []*model.User
+	GetAllUsers(ctx context.Context, offset, limit int) []*model.User
 	DeleteUser(ctx context.Context, id int) (*model.User, error)
-	UpdateUser(ctx context.Context, id int, model model.User) (*model.User, error)
+	UpdateUser(ctx context.Context, id int, updateModel model.User) (*model.User, error)
+	CheckUniqueConstraints(ctx context.Context, email, username string) error
 }
-
-var (
-	UserWithThisEmailExistsErr    = errors.New("user with this email already exists")
-	UserWithThisUsernameExistsErr = errors.New("user with this username already exists")
-)
-
-// TODO: LOG IN HANDLERS LAYER
 
 type UserService struct {
-	UserRepo UserRepo
+	UserRepo UserRepoUserService
 }
 
-func NewUserService(ur UserRepo) *UserService {
+func NewUserService(ur UserRepoUserService) *UserService {
 	return &UserService{UserRepo: ur}
 }
 
-// TODO: BETTER ERRORS HANDLING (wrap errors)
-
-func (us *UserService) RegisterUser(ctx context.Context, user dto.CreateUserDTO) (*model.User, error) {
+func (us *UserService) RegisterUser(ctx context.Context, user dto.UserDTO) (*model.User, error) {
 	// ensure that user with this email and username does not exist
-	got, _ := us.UserRepo.GetUserByEmail(ctx, user.Email)
-	if got != nil {
-		return nil, UserWithThisEmailExistsErr
+	err := us.UserRepo.CheckUniqueConstraints(ctx, user.Email, user.Username)
+	if err != nil {
+		return nil, err
 	}
 
-	got, _ = us.UserRepo.GetUserByUsername(ctx, user.Username)
-	if got != nil {
-		return nil, UserWithThisUsernameExistsErr
-	}
-
-	created, err := us.UserRepo.AddUser(ctx,
-		model.User{
-			Email:          user.Email,
-			Username:       user.Username,
-			HashedPassword: user.HashedPassword,
-		})
-
+	created, err := us.UserRepo.AddUser(ctx, usermapper.MapUserDtoToUser(&user))
 	if err != nil {
 		return nil, err
 	}
@@ -87,16 +70,12 @@ func (us *UserService) GetUserByUsername(ctx context.Context, username string) (
 	return user, nil
 }
 
-func (us *UserService) GetAllUsers(ctx context.Context) []*model.User {
-	return us.UserRepo.GetAllUsers(ctx)
+func (us *UserService) GetAllUsers(ctx context.Context, offset, limit int) []*model.User {
+	return us.UserRepo.GetAllUsers(ctx, offset, limit)
 }
 
-func (us *UserService) UpdateUser(ctx context.Context, id int, updateModel dto.UpdateUserDTO) (*model.User, error) {
-	user := model.User{
-		Email:          updateModel.NewEmail,
-		Username:       updateModel.NewUsername,
-		HashedPassword: updateModel.NewHashedPassword,
-	}
+func (us *UserService) UpdateUser(ctx context.Context, id int, updateModel dto.UserDTO) (*model.User, error) {
+	user := usermapper.MapUserDtoToUser(&updateModel)
 
 	updated, err := us.UserRepo.UpdateUser(ctx, id, user)
 	if err != nil {

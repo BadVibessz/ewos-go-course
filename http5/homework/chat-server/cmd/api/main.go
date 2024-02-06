@@ -4,33 +4,36 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service"
-	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/router"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/sirupsen/logrus"
-	httpSwagger "github.com/swaggo/http-swagger"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/sirupsen/logrus"
+
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/fixtures"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/router"
+
+	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
+	httpSwagger "github.com/swaggo/http-swagger"
+
 	_ "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/docs"
 )
 
-// @title Chat API
-// @version 1.0
-// @description API Server for Web Chat
+//	@title			Chat API
+//	@version		1.0
+//	@description	API Server for Web Chat
 
-// @BasePath /chat/api/v1
+//	@BasePath	/chat/api/v1
 
-// @securityDefinitions.basic BasicAuth
-// @in header
-// @name Authorization
+//	@securityDefinitions.basic	BasicAuth
+//	@in							header
+//	@name						Authorization
 
 const ( // todo: config file
 	dbSavePath = "http5/homework/chat-server/internal/db/db_state.json"
@@ -39,6 +42,7 @@ const ( // todo: config file
 
 func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	var inMemDB *inmemory.InMemDB
+
 	var savedChan <-chan any
 
 	dbStateRestored := true
@@ -49,7 +53,6 @@ func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 		if err != nil {
 			dbStateRestored = false
 		}
-
 	} else {
 		dbStateRestored = false
 	}
@@ -61,85 +64,16 @@ func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	return inMemDB, savedChan
 }
 
-func addDefaultDataInDB(ctx context.Context, us *service.UserService, ms *service.MessageService) {
-	users := []dto.CreateUserDTO{
-		{
-			Username:       "test",
-			Email:          "test@mail.ru",
-			HashedPassword: "$2a$10$n1ZupQQL9NBnIDHShSIfwut3wf2cUMtsmzBo/7r29oRo4tYRrmoLS",
-		},
-		{
-			Username:       "test2",
-			Email:          "test2@mail.ru",
-			HashedPassword: "$2a$10$O3bRPhNaWgVibnpkUFL.K.xXwmYnDKKMJ1Ak4iavFrSnn8wAsgYPW",
-		},
-		{
-			Username:       "test3",
-			Email:          "test3@mail.ru",
-			HashedPassword: "$2a$10$lgQ9a71CwJQkAF1yUcKKl..RGDT4OaGRjyBAVFgGupkdMclmS7wMS",
-		},
-	}
+func initInMemServices(db inmemory.InMemoryDB) (*service.UserService, *service.MessageService, *service.AuthBasicService) {
+	userRepo := repository.NewInMemUserRepo(db)
+	privateMsgRepo := repository.NewInMemPrivateMessageRepo(db)
+	publicMsgRepo := repository.NewInMemPublicMessageRepo(db)
 
-	for _, user := range users {
-		_, err := us.RegisterUser(ctx, user)
-		if err != nil {
-			return
-		}
-	}
+	userService := service.NewUserService(userRepo)
+	messageService := service.NewMessageService(privateMsgRepo, publicMsgRepo, userRepo)
+	authService := service.NewBasicAuthService(userRepo)
 
-	pubMessages := []dto.CreatePublicMessageDTO{
-		{
-			FromID:  1,
-			Content: "Hello everyone, I'm Test!",
-		},
-		{
-			FromID:  2,
-			Content: "Hi Test, I'm Test2 ;)",
-		},
-		{
-			FromID:  3,
-			Content: "What's up! I'm Test3",
-		},
-	}
-
-	for _, pubMsg := range pubMessages {
-		_, err := ms.SendPublicMessage(ctx, pubMsg)
-		if err != nil {
-			return
-		}
-	}
-
-	privMessages := []dto.CreatePrivateMessageDTO{
-		{
-			FromID:  1,
-			ToID:    2,
-			Content: "Excuse me, where am I?",
-		},
-		{
-			FromID:  2,
-			ToID:    1,
-			Content: "Ohh.. You are being tested too!",
-		},
-
-		{
-			FromID:  3,
-			ToID:    2,
-			Content: "Have something?",
-		},
-		{
-			FromID:  2,
-			ToID:    3,
-			Content: "What??.. Get off me!",
-		},
-	}
-
-	for _, privMsg := range privMessages {
-		_, err := ms.SendPrivateMessage(ctx, privMsg)
-		if err != nil {
-			return
-		}
-	}
-
+	return userService, messageService, authService
 }
 
 func main() {
@@ -148,16 +82,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	inMemDB, savedChan := initDB(ctx)
+	userService, messageService, authService := initInMemServices(inMemDB)
 
-	userRepo := repository.NewInMemUserRepo(inMemDB)
-	privateMsgRepo := repository.NewInMemPrivateMessageRepo(inMemDB)
-	publicMsgRepo := repository.NewInMemPublicMessageRepo(inMemDB)
-
-	userService := service.NewUserService(userRepo)
-	messageService := service.NewMessageService(privateMsgRepo, publicMsgRepo, userRepo)
-	authService := service.NewBasicAuthService(userRepo)
-
-	addDefaultDataInDB(ctx, userService, messageService)
+	fixtures.LoadFixtures(ctx, userService, messageService) // todo: maybe load fixtures via db layer, not service?
 
 	userHandler := handler.NewUserHandler(userService, messageService, authService, logger)
 	messageHandler := handler.NewMessageHandler(messageService, userService, authService, logger)
@@ -180,10 +107,11 @@ func main() {
 
 	// add swagger middleware
 	r.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL(fmt.Sprintf("http://localhost:%v/swagger/doc.json", port)), //The url pointing to API definition
+		httpSwagger.URL(fmt.Sprintf("http://localhost:%v/swagger/doc.json", port)), // The url pointing to API definition
 	))
 
 	logger.Infof("server started at port %v", server.Addr)
+
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			logger.WithError(err).Fatalf("server can't listen requests")
@@ -192,7 +120,7 @@ func main() {
 
 	logger.Infof("documentation available on: http://localhost:%v/swagger/index.html", port)
 
-	interrupt := make(chan os.Signal)
+	interrupt := make(chan os.Signal, 1)
 
 	signal.Ignore(syscall.SIGHUP, syscall.SIGPIPE)
 	signal.Notify(interrupt, syscall.SIGINT)

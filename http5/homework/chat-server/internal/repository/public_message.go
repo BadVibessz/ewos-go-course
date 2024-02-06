@@ -3,24 +3,24 @@ package repository
 import (
 	"context"
 	"errors"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
-	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+
+	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 )
 
 type PublicMessageInMemRepo struct {
-	DB *inmemory.InMemDB
+	DB inmemory.InMemoryDB
 }
 
 const publicMessageTableName = "public_messages"
 
-var (
-	NoSuchPublicMessageErr = errors.New("no such public message")
-)
+var ErrNoSuchPublicMessage = errors.New("no such public message")
 
-func NewInMemPublicMessageRepo(db *inmemory.InMemDB) *PublicMessageInMemRepo {
+func NewInMemPublicMessageRepo(db inmemory.InMemoryDB) *PublicMessageInMemRepo {
 	repo := PublicMessageInMemRepo{DB: db}
 
 	repo.DB.CreateTable(publicMessageTableName)
@@ -28,7 +28,7 @@ func NewInMemPublicMessageRepo(db *inmemory.InMemDB) *PublicMessageInMemRepo {
 	return &repo
 }
 
-func (pr *PublicMessageInMemRepo) AddPublicMessage(ctx context.Context, msg model.PublicMessage) (*model.PublicMessage, error) {
+func (pr *PublicMessageInMemRepo) AddPublicMessage(_ context.Context, msg model.PublicMessage) (*model.PublicMessage, error) {
 	idOffset, err := pr.DB.GetRowsCount(publicMessageTableName)
 	if err != nil {
 		return nil, err
@@ -45,19 +45,20 @@ func (pr *PublicMessageInMemRepo) AddPublicMessage(ctx context.Context, msg mode
 
 	err = pr.DB.AddRow(publicMessageTableName, strconv.Itoa(toCreate.ID), toCreate)
 	if err != nil {
-		return nil, err // todo: maybe return custom err of this layer? (NoSuchUserErr?)
+		return nil, err // todo: maybe return custom err of this layer? (ErrNoSuchUser?)
 	}
 
 	return &toCreate, nil
 }
 
-func (pr *PublicMessageInMemRepo) GetAllPublicMessages(ctx context.Context) []*model.PublicMessage {
-	rows, err := pr.DB.GetAllRows(publicMessageTableName)
+func (pr *PublicMessageInMemRepo) GetAllPublicMessages(_ context.Context, offset, limit int) []*model.PublicMessage {
+	rows, err := pr.DB.GetAllRows(publicMessageTableName, offset, limit)
 	if err != nil {
 		return nil
 	}
 
 	res := make([]*model.PublicMessage, 0, len(rows))
+
 	for _, row := range rows {
 		msg, ok := row.(model.PublicMessage)
 		if ok {
@@ -70,26 +71,26 @@ func (pr *PublicMessageInMemRepo) GetAllPublicMessages(ctx context.Context) []*m
 	return res
 }
 
-func (pr *PublicMessageInMemRepo) GetPublicMessage(ctx context.Context, id int) (*model.PublicMessage, error) {
+func (pr *PublicMessageInMemRepo) GetPublicMessage(_ context.Context, id int) (*model.PublicMessage, error) {
 	row, err := pr.DB.GetRow(publicMessageTableName, strconv.Itoa(id))
 	if err != nil {
-		return nil, NoSuchPublicMessageErr
+		return nil, ErrNoSuchPublicMessage
 	}
 
 	msg, ok := row.(model.PublicMessage)
 	if !ok {
-		return nil, NoSuchPublicMessageErr
+		return nil, ErrNoSuchPublicMessage
 	}
 
 	return &msg, nil
 }
 
 func (pr *PublicMessageInMemRepo) UpdatePublicMessage(ctx context.Context, id int, newContent string) (*model.PublicMessage, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
 func (pr *PublicMessageInMemRepo) DeletePublicMessage(ctx context.Context, id int) (*model.PublicMessage, error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }

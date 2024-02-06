@@ -1,12 +1,12 @@
 package dto
 
-type CreatePrivateMessageDTO struct {
+type PrivateMessageDTO struct {
 	FromID  int
 	ToID    int
 	Content string
 }
 
-type CreatePublicMessageDTO struct {
+type PublicMessageDTO struct {
 	FromID  int
 	Content string
 }

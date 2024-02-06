@@ -2,24 +2,29 @@ package repository
 
 import (
 	"context"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
-	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
-	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
+	"math"
+	"slices"
 	"testing"
+
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+
+	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 )
 
-var db = inmemory.NewInMemDB()
-var repo = NewInMemUserRepo(db)
-var ctx = context.Background()
+var (
+	ctx   = context.Background()
+	db, _ = inmemory.NewInMemDB(ctx, "")
+	repo  = NewInMemUserRepo(db)
+)
 
-func isEqualCreateModelToUser(createModel *model.CreateUserModel, user *model.User) bool {
+func isEqualCreateModelToUser(createModel *model.User, user *model.User) bool {
 	return createModel.Email == user.Email &&
 		createModel.Username == user.Username &&
 		createModel.HashedPassword == user.HashedPassword
 }
 
 func TestUserCreatedPositive(t *testing.T) {
-	toCreate := model.CreateUserModel{
+	toCreate := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",
@@ -41,13 +46,13 @@ func TestUserCreatedPositive(t *testing.T) {
 }
 
 func TestGetAllUsersPositive(t *testing.T) {
-	toCreate1 := model.CreateUserModel{
+	toCreate1 := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",
 	}
 
-	toCreate2 := model.CreateUserModel{
+	toCreate2 := model.User{
 		Email:          "test@mail.com2",
 		Username:       "test2",
 		HashedPassword: "NoHash2",
@@ -63,18 +68,18 @@ func TestGetAllUsersPositive(t *testing.T) {
 		t.Fatalf("cannot add user")
 	}
 
-	got := repo.GetAllUsers(ctx)
-	if got == nil || len(got) == 0 {
+	got := repo.GetAllUsers(ctx, 0, math.MaxInt64)
+	if len(got) == 0 {
 		t.Fatal()
 	}
 
-	if !sliceutils.ContainsValue(got, *created1) || !sliceutils.ContainsValue(got, *created2) {
+	if !slices.Contains(got, created1) || !slices.Contains(got, created2) {
 		t.Fatal()
 	}
 }
 
 func TestGetUserByIdPositive(t *testing.T) {
-	toCreate := model.CreateUserModel{
+	toCreate := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",
@@ -93,11 +98,10 @@ func TestGetUserByIdPositive(t *testing.T) {
 	if *got != *created {
 		t.Fatalf("expected user not equals to actual")
 	}
-
 }
 
 func TestGetUserByEmailPositive(t *testing.T) {
-	toCreate := model.CreateUserModel{
+	toCreate := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",
@@ -116,11 +120,10 @@ func TestGetUserByEmailPositive(t *testing.T) {
 	if *got != *created {
 		t.Fatalf("expected user not equals to actual")
 	}
-
 }
 
 func TestGetUserByUsernamePositive(t *testing.T) {
-	toCreate := model.CreateUserModel{
+	toCreate := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",
@@ -139,5 +142,4 @@ func TestGetUserByUsernamePositive(t *testing.T) {
 	if *got != *created {
 		t.Fatalf("expected user not equals to actual")
 	}
-
 }

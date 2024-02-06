@@ -2,28 +2,29 @@ package service
 
 import (
 	"context"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 )
 
 type AuthBasicService struct {
-	UserRepo UserRepo
+	UserRepo UserRepoUserService
 }
 
-func NewBasicAuthService(ur UserRepo) *AuthBasicService {
+func NewBasicAuthService(ur UserRepoUserService) *AuthBasicService {
 	return &AuthBasicService{
 		UserRepo: ur,
 	}
 }
 
-func (as *AuthBasicService) Login(ctx context.Context, cred dto.LoginUserDTO) (*model.User, error) {
-	user, err := as.UserRepo.GetUserByUsername(ctx, cred.Username)
+func (as *AuthBasicService) Login(ctx context.Context, username, password string) (*model.User, error) {
+	user, err := as.UserRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(cred.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password))
 	if err != nil {
 		return nil, err
 	}

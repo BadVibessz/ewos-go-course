@@ -5,8 +5,10 @@ import (
 	"testing"
 )
 
-var ctx, cancel = context.WithCancel(context.Background())
-var inMemDB, _ = NewInMemDB(ctx, "db_save.json")
+var (
+	ctx        = context.Background()
+	inMemDB, _ = NewInMemDB(ctx, "db_save.json")
+)
 
 func TestTableCreated(t *testing.T) {
 	inMemDB.Clear()
@@ -40,5 +42,4 @@ func TestGetExistingTable(t *testing.T) {
 	if err != nil {
 		t.Fatal()
 	}
-
 }

@@ -12,16 +12,6 @@ func Filter[T any](ss []T, test func(T) bool) []T {
 	return res
 }
 
-func ContainsValue[T comparable](ss []*T, v T) bool {
-	for _, s := range ss {
-		if *s == v {
-			return true
-		}
-	}
-
-	return false
-}
-
 func Map[T any, V any](s []T, f func(T) V) []V {
 	res := make([]V, len(s))
 
@@ -40,9 +30,21 @@ func Unique[T comparable](s []T) []T {
 		_, ok := visited[elem]
 		if !ok {
 			visited[elem] = true
+
 			res = append(res, elem)
 		}
 	}
 
 	return res
+}
+
+func Slice[T any](s []T, offset int, limit int) []T {
+	leftBound := offset
+	rightBound := leftBound + limit
+
+	if rightBound >= len(s) {
+		rightBound = len(s)
+	}
+
+	return s[leftBound:rightBound]
 }
