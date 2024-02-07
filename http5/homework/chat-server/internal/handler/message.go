@@ -1,10 +1,10 @@
+// nolint
 package handler
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service"
 	"net/http"
 	"strconv"
 
@@ -19,6 +19,7 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 
 	messagemapper "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/mapper/message"
+	messageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
 	handlerutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/handler"
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
@@ -34,17 +35,16 @@ type MessageService interface {
 	GetAllPublicMessages(ctx context.Context, offset, limit int) []*model.PublicMessage
 
 	GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) ([]*model.PrivateMessage, error)
-
-	UpdatePrivateMessage(ctx context.Context, id int, newContent string) (*model.PrivateMessage, error)
-	UpdatePublicMessage(ctx context.Context, id int, newContent string) (*model.PublicMessage, error)
-
-	DeletePrivateMessage(ctx context.Context, id int) (*model.PrivateMessage, error)
-	DeletePublicMessage(ctx context.Context, id int) (*model.PublicMessage, error)
 }
 
 const (
 	defaultOffset = 0
 	defaultLimit  = 100
+)
+
+var (
+	ErrInvalidOffset = errors.New("invalid offset provided")
+	ErrInvalidLimit  = errors.New("invalid limit provided")
 )
 
 type MessageHandler struct {
@@ -90,19 +90,36 @@ func (mh *MessageHandler) Routes() *chi.Mux {
 //	@Security		BasicAuth
 //	@Tags			Message
 //	@Produce		json
-//	@Success		200	{object}	[]response.PublicMessageResponse
-//	@Failure		401	{string}	Unauthorized
+//	@Param			offset	query		int	true	"Offset"
+//	@Param			limit	query		int	true	"Limit"
+//	@Success		200		{object}	[]response.PublicMessageResponse
+//	@Failure		401		{string}	Unauthorized
 //	@Router			/messages/public [get]
-func (mh *MessageHandler) GetAllPublicMessages(w http.ResponseWriter, req *http.Request) {
+func (mh *MessageHandler) GetAllPublicMessages(rw http.ResponseWriter, req *http.Request) {
 	offset, limit := handlerutils.GetOffsetAndLimitFromQuery(req, defaultOffset, defaultLimit)
+	if offset < 0 {
+		respMsg := fmt.Sprintf("%s", ErrInvalidOffset)
+
+		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, "", respMsg)
+
+		return
+	}
+
+	if limit < 0 {
+		respMsg := fmt.Sprintf("%s", ErrInvalidLimit)
+
+		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, "", respMsg)
+
+		return
+	}
 
 	messages := mh.MessageService.GetAllPublicMessages(req.Context(), offset, limit)
 
 	resp := sliceutils.Map(messages, messagemapper.MapPublicMessageToPublicMsgResp)
 
-	render.JSON(w, req, resp)
+	render.JSON(rw, req, resp)
 
-	w.WriteHeader(http.StatusOK)
+	rw.WriteHeader(http.StatusOK)
 }
 
 // SendPublicMessage godoc
@@ -217,7 +234,7 @@ func (mh *MessageHandler) SendPrivateMessage(rw http.ResponseWriter, req *http.R
 	}
 
 	message, err := mh.MessageService.SendPrivateMessage(req.Context(), msg)
-	if errors.Is(err, service.ErrNoSuchReceiver) {
+	if errors.Is(err, messageservice.ErrNoSuchReceiver) {
 		logMsg := fmt.Sprintf("error occurred sending private message: %s", err)
 		respMsg := fmt.Sprintf("error occurred sending private message: %s", err)
 
@@ -246,6 +263,8 @@ func (mh *MessageHandler) SendPrivateMessage(rw http.ResponseWriter, req *http.R
 //	@Security		BasicAuth
 //	@Tags			Message
 //	@Produce		json
+//	@Param			offset	query		int	true	"Offset"
+//	@Param			limit	query		int	true	"Limit"
 //	@Success		200	{object}	[]response.PrivateMessageResponse
 //	@Failure		401	{string}	Unauthorized
 //	@Router			/messages/private [get]
@@ -257,6 +276,22 @@ func (mh *MessageHandler) GetAllPrivateMessages(rw http.ResponseWriter, req *htt
 	}
 
 	offset, limit := handlerutils.GetOffsetAndLimitFromQuery(req, defaultOffset, defaultLimit)
+	if offset < 0 {
+		respMsg := fmt.Sprintf("%s", ErrInvalidOffset)
+
+		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, "", respMsg)
+
+		return
+	}
+
+	if limit < 0 {
+		respMsg := fmt.Sprintf("%s", ErrInvalidLimit)
+
+		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, "", respMsg)
+
+		return
+	}
+
 	messages := mh.MessageService.GetAllPrivateMessages(req.Context(), id, offset, limit)
 
 	resp := sliceutils.Map(messages, messagemapper.MapPrivateMessageToPrivateMsgResp)
@@ -272,6 +307,8 @@ func (mh *MessageHandler) GetAllPrivateMessages(rw http.ResponseWriter, req *htt
 //	@Security		BasicAuth
 //	@Tags			Message
 //	@Produce		json
+//	@Param			offset	query		int	true	"Offset"
+//	@Param			limit	query		int	true	"Limit"
 //	@Param			user_id	path	int	true	"User ID"
 //	@Para			page query int true "page"
 //	@Success		200	{object}	[]response.PrivateMessageResponse
@@ -292,6 +329,21 @@ func (mh *MessageHandler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, 
 	}
 
 	offset, limit := handlerutils.GetOffsetAndLimitFromQuery(req, defaultOffset, defaultLimit)
+	if offset < 0 {
+		respMsg := fmt.Sprintf("%s", ErrInvalidOffset)
+
+		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, "", respMsg)
+
+		return
+	}
+
+	if limit < 0 {
+		respMsg := fmt.Sprintf("%s", ErrInvalidLimit)
+
+		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, "", respMsg)
+
+		return
+	}
 
 	messages, err := mh.MessageService.GetAllPrivateMessagesFromUser(ctx, id, fromID, offset, limit)
 	if err != nil {

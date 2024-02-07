@@ -1,4 +1,4 @@
-package service
+package message
 
 import (
 	"context"
@@ -15,19 +15,15 @@ type PrivateMessageRepo interface {
 	AddPrivateMessage(ctx context.Context, msg model.PrivateMessage) (*model.PrivateMessage, error)
 	GetAllPrivateMessages(ctx context.Context, offset, limit int) []*model.PrivateMessage
 	GetPrivateMessage(ctx context.Context, id int) (*model.PrivateMessage, error)
-	UpdatePrivateMessage(ctx context.Context, id int, newContent string) (*model.PrivateMessage, error)
-	DeletePrivateMessage(ctx context.Context, id int) (*model.PrivateMessage, error)
 }
 
 type PublicMessageRepo interface {
 	AddPublicMessage(ctx context.Context, msg model.PublicMessage) (*model.PublicMessage, error)
 	GetAllPublicMessages(ctx context.Context, offset, limit int) []*model.PublicMessage
 	GetPublicMessage(ctx context.Context, id int) (*model.PublicMessage, error)
-	UpdatePublicMessage(ctx context.Context, id int, newContent string) (*model.PublicMessage, error)
-	DeletePublicMessage(ctx context.Context, id int) (*model.PublicMessage, error)
 }
 
-type UserRepoMsgService interface {
+type UserRepo interface {
 	AddUser(ctx context.Context, user model.User) (*model.User, error)
 	GetUserByID(ctx context.Context, id int) (*model.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
@@ -46,10 +42,10 @@ var (
 type MessageService struct {
 	PrivateMessageRepo PrivateMessageRepo
 	PublicMessageRepo  PublicMessageRepo
-	UserRepo           UserRepoMsgService
+	UserRepo           UserRepo
 }
 
-func NewMessageService(pr PrivateMessageRepo, pb PublicMessageRepo, ur UserRepoMsgService) *MessageService {
+func NewMessageService(pr PrivateMessageRepo, pb PublicMessageRepo, ur UserRepo) *MessageService {
 	return &MessageService{
 		PrivateMessageRepo: pr,
 		PublicMessageRepo:  pb,
@@ -143,40 +139,4 @@ func (ms *MessageService) GetPublicMessage(ctx context.Context, id int) (*model.
 
 func (ms *MessageService) GetAllPublicMessages(ctx context.Context, offset, limit int) []*model.PublicMessage {
 	return ms.PublicMessageRepo.GetAllPublicMessages(ctx, offset, limit)
-}
-
-func (ms *MessageService) UpdatePrivateMessage(ctx context.Context, id int, newContent string) (*model.PrivateMessage, error) {
-	msg, err := ms.PrivateMessageRepo.UpdatePrivateMessage(ctx, id, newContent)
-	if err != nil {
-		return nil, err
-	}
-
-	return msg, nil
-}
-
-func (ms *MessageService) UpdatePublicMessage(ctx context.Context, id int, newContent string) (*model.PublicMessage, error) {
-	msg, err := ms.PublicMessageRepo.UpdatePublicMessage(ctx, id, newContent)
-	if err != nil {
-		return nil, err
-	}
-
-	return msg, nil
-}
-
-func (ms *MessageService) DeletePrivateMessage(ctx context.Context, id int) (*model.PrivateMessage, error) {
-	msg, err := ms.PrivateMessageRepo.DeletePrivateMessage(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return msg, nil
-}
-
-func (ms *MessageService) DeletePublicMessage(ctx context.Context, id int) (*model.PublicMessage, error) {
-	msg, err := ms.PublicMessageRepo.DeletePublicMessage(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return msg, nil
 }

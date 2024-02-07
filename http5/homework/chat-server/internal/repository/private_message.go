@@ -85,13 +85,3 @@ func (pr *PrivateMessageInMemRepo) GetPrivateMessage(_ context.Context, id int) 
 
 	return &msg, nil
 }
-
-func (pr *PrivateMessageInMemRepo) UpdatePrivateMessage(_ context.Context, id int, newContent string) (*model.PrivateMessage, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (pr *PrivateMessageInMemRepo) DeletePrivateMessage(_ context.Context, id int) (*model.PrivateMessage, error) {
-	// TODO implement me
-	panic("implement me")
-}

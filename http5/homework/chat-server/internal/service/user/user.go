@@ -1,4 +1,4 @@
-package service
+package user
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	usermapper "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/mapper/user"
 )
 
-type UserRepoUserService interface {
+type UserRepo interface {
 	AddUser(ctx context.Context, user model.User) (*model.User, error)
 	GetUserByID(ctx context.Context, id int) (*model.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
@@ -21,10 +21,10 @@ type UserRepoUserService interface {
 }
 
 type UserService struct {
-	UserRepo UserRepoUserService
+	UserRepo UserRepo
 }
 
-func NewUserService(ur UserRepoUserService) *UserService {
+func NewUserService(ur UserRepo) *UserService {
 	return &UserService{UserRepo: ur}
 }
 

@@ -84,6 +84,17 @@ paths:
   /messages/private:
     get:
       description: Get all private messages that were sent to chat
+      parameters:
+      - description: Offset
+        in: query
+        name: offset
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -130,6 +141,10 @@ paths:
           description: Unauthorized
           schema:
             type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
       security:
       - BasicAuth: []
       summary: Send private message to user
@@ -139,6 +154,16 @@ paths:
     get:
       description: Get all private messages from user
       parameters:
+      - description: Offset
+        in: query
+        name: offset
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        required: true
+        type: integer
       - description: User ID
         in: path
         name: user_id
@@ -165,6 +190,17 @@ paths:
   /messages/public:
     get:
       description: Get all public messages that were sent to chat
+      parameters:
+      - description: Offset
+        in: query
+        name: offset
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -205,6 +241,10 @@ paths:
             type: array
         "401":
           description: Unauthorized
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
           schema:
             type: string
       security:
@@ -275,6 +315,10 @@ paths:
             $ref: '#/definitions/response.UserResponse'
         "400":
           description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
           schema:
             type: string
       summary: Register new user

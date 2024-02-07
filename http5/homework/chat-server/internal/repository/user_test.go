@@ -2,20 +2,20 @@ package repository
 
 import (
 	"context"
-	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 	"math"
 	"testing"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
+	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
-var (
-	ctx   = context.Background()
-	db, _ = inmemory.NewInMemDB(ctx, "")
-	repo  = NewInMemUserRepo(db)
-)
+func initRepo(ctx context.Context) *UserRepoInMemDB {
+	db, _ := inmemory.NewInMemDB(ctx, "")
+
+	return NewInMemUserRepo(db)
+}
 
 func isEqualCreateModelToUser(createModel *model.User, user *model.User) bool {
 	return createModel.Email == user.Email &&
@@ -24,6 +24,9 @@ func isEqualCreateModelToUser(createModel *model.User, user *model.User) bool {
 }
 
 func TestUserCreatedPositive(t *testing.T) {
+	ctx := context.Background()
+	repo := initRepo(ctx)
+
 	toCreate := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",
@@ -46,6 +49,9 @@ func TestUserCreatedPositive(t *testing.T) {
 }
 
 func TestGetAllUsersPositive(t *testing.T) {
+	ctx := context.Background()
+	repo := initRepo(ctx)
+
 	toCreate1 := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",
@@ -89,6 +95,9 @@ func TestGetAllUsersPositive(t *testing.T) {
 }
 
 func TestGetUserByIdPositive(t *testing.T) {
+	ctx := context.Background()
+	repo := initRepo(ctx)
+
 	toCreate := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",
@@ -116,6 +125,9 @@ func TestGetUserByIdPositive(t *testing.T) {
 }
 
 func TestGetUserByEmailPositive(t *testing.T) {
+	ctx := context.Background()
+	repo := initRepo(ctx)
+
 	toCreate := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",
@@ -143,6 +155,9 @@ func TestGetUserByEmailPositive(t *testing.T) {
 }
 
 func TestGetUserByUsernamePositive(t *testing.T) {
+	ctx := context.Background()
+	repo := initRepo(ctx)
+
 	toCreate := model.User{
 		Email:          "test@mail.com",
 		Username:       "test",

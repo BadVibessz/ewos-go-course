@@ -6,13 +6,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+
+	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
 )
 
 type AuthBasicService struct {
-	UserRepo UserRepoUserService
+	UserRepo userservice.UserRepo
 }
 
-func NewBasicAuthService(ur UserRepoUserService) *AuthBasicService {
+func NewBasicAuthService(ur userservice.UserRepo) *AuthBasicService {
 	return &AuthBasicService{
 		UserRepo: ur,
 	}

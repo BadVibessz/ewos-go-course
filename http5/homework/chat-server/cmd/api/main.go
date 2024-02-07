@@ -19,6 +19,8 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/router"
 
+	messageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
+	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 	httpSwagger "github.com/swaggo/http-swagger"
 
@@ -64,13 +66,13 @@ func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	return inMemDB, savedChan
 }
 
-func initInMemServices(db inmemory.InMemoryDB) (*service.UserService, *service.MessageService, *service.AuthBasicService) {
+func initInMemServices(db inmemory.InMemoryDB) (*userservice.UserService, *messageservice.MessageService, *service.AuthBasicService) {
 	userRepo := repository.NewInMemUserRepo(db)
 	privateMsgRepo := repository.NewInMemPrivateMessageRepo(db)
 	publicMsgRepo := repository.NewInMemPublicMessageRepo(db)
 
-	userService := service.NewUserService(userRepo)
-	messageService := service.NewMessageService(privateMsgRepo, publicMsgRepo, userRepo)
+	userService := userservice.NewUserService(userRepo)
+	messageService := messageservice.NewMessageService(privateMsgRepo, publicMsgRepo, userRepo)
 	authService := service.NewBasicAuthService(userRepo)
 
 	return userService, messageService, authService

@@ -84,13 +84,3 @@ func (pr *PublicMessageInMemRepo) GetPublicMessage(_ context.Context, id int) (*
 
 	return &msg, nil
 }
-
-func (pr *PublicMessageInMemRepo) UpdatePublicMessage(ctx context.Context, id int, newContent string) (*model.PublicMessage, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (pr *PublicMessageInMemRepo) DeletePublicMessage(ctx context.Context, id int) (*model.PublicMessage, error) {
-	// TODO implement me
-	panic("implement me")
-}

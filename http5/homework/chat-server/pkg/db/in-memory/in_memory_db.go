@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/wk8/go-ordered-map/v2"
+	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
 var (

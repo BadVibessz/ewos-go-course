@@ -5,12 +5,16 @@ import (
 	"testing"
 )
 
-var (
-	ctx        = context.Background()
-	inMemDB, _ = NewInMemDB(ctx, "db_save.json")
-)
+func initDB() *InMemDB {
+	ctx := context.Background()
+	inMemDB, _ := NewInMemDB(ctx, "")
+
+	return inMemDB
+}
 
 func TestTableCreated(t *testing.T) {
+	inMemDB := initDB()
+
 	inMemDB.Clear()
 
 	tableName := "new_table"
@@ -23,6 +27,8 @@ func TestTableCreated(t *testing.T) {
 }
 
 func TestGetExistingTable(t *testing.T) {
+	inMemDB := initDB()
+
 	inMemDB.Clear()
 
 	tableName := "new_table"

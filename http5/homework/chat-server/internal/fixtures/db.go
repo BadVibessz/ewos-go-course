@@ -1,13 +1,16 @@
+// nolint
 package fixtures
 
 import (
 	"context"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service"
+
+	messageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
+	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
 )
 
-func LoadFixtures(ctx context.Context, us *service.UserService, ms *service.MessageService) {
+func LoadFixtures(ctx context.Context, us *userservice.UserService, ms *messageservice.MessageService) {
 	users := []dto.UserDTO{
 		{
 			Username:       "test",
