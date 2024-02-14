@@ -1,6 +1,22 @@
 package main
 
+import (
+	"context"
+	log "github.com/sirupsen/logrus"
+	priceproducer "messageBrokers4/internal/infrastructure/producer"
+)
+
+var brokers = []string{":29092", ":29093"}
+
 func main() {
-	// TODO: напиши логику инициализации и запуска producer
-	panic("implement me")
+	logger := log.New()
+
+	producer, err := priceproducer.NewPricesProducer(brokers, logger)
+	if err != nil {
+		logger.Fatalf("producer not started: %v", err)
+	}
+
+	ctx := context.Background() // todo: graceful shutdown
+
+	producer.ProducePrices(ctx, "prices")
 }

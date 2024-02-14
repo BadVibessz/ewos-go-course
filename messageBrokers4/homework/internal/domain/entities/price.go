@@ -5,7 +5,7 @@ import (
 )
 
 type Price struct {
-	Ticker string
-	Value  float64
-	TS     time.Time
+	Ticker string    `json:"ticker"`
+	Value  float64   `json:"value"`
+	TS     time.Time `json:"ts"`
 }
