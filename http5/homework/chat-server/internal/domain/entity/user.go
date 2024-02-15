@@ -1,6 +1,6 @@
-package dto
+package entity
 
-type UserDTO struct {
+type User struct {
 	Email          string
 	Username       string
 	HashedPassword string

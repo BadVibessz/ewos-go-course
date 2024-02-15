@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -22,25 +21,6 @@ func WriteErrResponseAndLog(rw http.ResponseWriter, logger *logrus.Logger, statu
 		}
 	}
 }
-
-func GetOffsetAndLimitFromQuery(req *http.Request, defaultOffset int, defaultLimit int) (off int, lim int) {
-	offset, err := strconv.Atoi(req.URL.Query().Get("offset"))
-	if offset == 0 || err != nil {
-		offset = defaultOffset
-	}
-
-	limit, err := strconv.Atoi(req.URL.Query().Get("limit"))
-	if limit == 0 || err != nil {
-		limit = defaultLimit
-	}
-
-	return offset, limit
-}
-
-var (
-	ErrNoHeaderProvided      = errors.New("no header provided")
-	ErrInvalidHeaderProvided = errors.New("invalid header provided")
-)
 
 func GetIntHeaderByKey(req *http.Request, key string) (int, error) {
 	str := req.Header.Get(key)

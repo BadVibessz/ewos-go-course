@@ -1,12 +1,12 @@
-package dto
+package entity
 
-type PrivateMessageDTO struct {
+type PrivateMessage struct {
 	FromID  int
 	ToID    int
 	Content string
 }
 
-type PublicMessageDTO struct {
+type PublicMessage struct {
 	FromID  int
 	Content string
 }

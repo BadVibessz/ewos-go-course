@@ -7,9 +7,12 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type Middleware = func(next http.Handler) http.Handler
+type (
+	Middleware = func(next http.Handler) http.Handler
+	Routers    = map[string]chi.Router
+)
 
-func MakeRoutes(basePath string, routers map[string]chi.Router, middlewares []Middleware) *chi.Mux {
+func MakeRoutes(basePath string, routers Routers, middlewares []Middleware) *chi.Mux {
 	r := chi.NewRouter()
 
 	for _, middleware := range middlewares {

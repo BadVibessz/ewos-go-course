@@ -155,7 +155,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "description": "User ID",
+                        "description": "User FromID",
                         "name": "user_id",
                         "in": "path",
                         "required": true

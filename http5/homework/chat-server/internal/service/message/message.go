@@ -5,7 +5,8 @@ import (
 	"errors"
 	"math"
 
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
@@ -53,7 +54,7 @@ func NewMessageService(pr PrivateMessageRepo, pb PublicMessageRepo, ur UserRepo)
 	}
 }
 
-func (ms *MessageService) SendPrivateMessage(ctx context.Context, createModel dto.PrivateMessageDTO) (*model.PrivateMessage, error) {
+func (ms *MessageService) SendPrivateMessage(ctx context.Context, createModel entity.PrivateMessage) (*model.PrivateMessage, error) {
 	userFrom, err := ms.UserRepo.GetUserByID(ctx, createModel.FromID)
 	if err != nil {
 		return nil, ErrNoSuchSender
@@ -78,7 +79,7 @@ func (ms *MessageService) SendPrivateMessage(ctx context.Context, createModel dt
 	return created, nil
 }
 
-func (ms *MessageService) SendPublicMessage(ctx context.Context, createModel dto.PublicMessageDTO) (*model.PublicMessage, error) {
+func (ms *MessageService) SendPublicMessage(ctx context.Context, createModel entity.PublicMessage) (*model.PublicMessage, error) {
 	userFrom, err := ms.UserRepo.GetUserByID(ctx, createModel.FromID)
 	if err != nil {
 		return nil, err
@@ -98,7 +99,7 @@ func (ms *MessageService) SendPublicMessage(ctx context.Context, createModel dto
 }
 
 func (ms *MessageService) GetPrivateMessage(ctx context.Context, id int) (*model.PrivateMessage, error) {
-	// todo: maybe we should validate that user that requests this message is a sender or receiver?
+	// todo: we should validate that user that requests this message is a sender or receiver
 	msg, err := ms.PrivateMessageRepo.GetPrivateMessage(ctx, id)
 	if err != nil {
 		return nil, err
@@ -107,16 +108,16 @@ func (ms *MessageService) GetPrivateMessage(ctx context.Context, id int) (*model
 	return msg, nil
 }
 
-func (ms *MessageService) GetAllPrivateMessages(ctx context.Context, userToID int, offset, limit int) []*model.PrivateMessage {
+func (ms *MessageService) GetAllPrivateMessages(ctx context.Context, userToID int, paginationOpts request.PaginationOptions) []*model.PrivateMessage {
 	messages := ms.PrivateMessageRepo.GetAllPrivateMessages(ctx, 0, math.MaxInt64)
 
 	// return only messages that were sent to current user
 	messages = sliceutils.Filter(messages, func(msg *model.PrivateMessage) bool { return msg.To.ID == userToID })
 
-	return sliceutils.Slice(messages, offset, limit)
+	return sliceutils.Slice(messages, paginationOpts.Offset, paginationOpts.Limit)
 }
 
-func (ms *MessageService) GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) ([]*model.PrivateMessage, error) {
+func (ms *MessageService) GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, paginationOpts request.PaginationOptions) ([]*model.PrivateMessage, error) {
 	_, err := ms.UserRepo.GetUserByID(ctx, fromID)
 	if err != nil {
 		return nil, err
@@ -125,7 +126,7 @@ func (ms *MessageService) GetAllPrivateMessagesFromUser(ctx context.Context, toI
 	messages := ms.PrivateMessageRepo.GetAllPrivateMessages(ctx, 0, math.MaxInt64)
 	messages = sliceutils.Filter(messages, func(msg *model.PrivateMessage) bool { return msg.From.ID == fromID && msg.To.ID == toID })
 
-	return sliceutils.Slice(messages, offset, limit), nil
+	return sliceutils.Slice(messages, paginationOpts.Offset, paginationOpts.Limit), nil
 }
 
 func (ms *MessageService) GetPublicMessage(ctx context.Context, id int) (*model.PublicMessage, error) {
@@ -137,6 +138,6 @@ func (ms *MessageService) GetPublicMessage(ctx context.Context, id int) (*model.
 	return msg, nil
 }
 
-func (ms *MessageService) GetAllPublicMessages(ctx context.Context, offset, limit int) []*model.PublicMessage {
-	return ms.PublicMessageRepo.GetAllPublicMessages(ctx, offset, limit)
+func (ms *MessageService) GetAllPublicMessages(ctx context.Context, paginationOpts request.PaginationOptions) []*model.PublicMessage {
+	return ms.PublicMessageRepo.GetAllPublicMessages(ctx, paginationOpts.Offset, paginationOpts.Limit)
 }

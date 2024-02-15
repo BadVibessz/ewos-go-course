@@ -89,12 +89,14 @@ func main() {
 	fixtures.LoadFixtures(ctx, userService, messageService) // todo: maybe load fixtures via db layer, not service?
 
 	userHandler := handler.NewUserHandler(userService, messageService, authService, logger)
-	messageHandler := handler.NewMessageHandler(messageService, userService, authService, logger)
+	publicMessageHandler := handler.NewPublicMessageHandler(messageService, userService, authService, logger)
+	privateMessageHandler := handler.NewPrivateMessageHandler(messageService, userService, authService, logger)
 
 	routers := make(map[string]chi.Router)
 
 	routers["/users"] = userHandler.Routes()
-	routers["/messages"] = messageHandler.Routes()
+	routers["/messages/public"] = publicMessageHandler.Routes()
+	routers["/messages/private"] = privateMessageHandler.Routes()
 
 	middlewares := []router.Middleware{
 		middleware.Recoverer,
@@ -115,7 +117,7 @@ func main() {
 	logger.Infof("server started at port %v", server.Addr)
 
 	go func() {
-		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.WithError(err).Fatalf("server can't listen requests")
 		}
 	}()

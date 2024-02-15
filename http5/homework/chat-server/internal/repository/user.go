@@ -65,7 +65,7 @@ func (ur *UserRepoInMemDB) AddUser(_ context.Context, user model.User) (*model.U
 
 	err = ur.DB.AddRow(userTableName, strconv.Itoa(user.ID), user)
 	if err != nil {
-		return nil, err // todo: maybe return custom err of this layer? (ErrNoSuchUser?)
+		return nil, err
 	}
 
 	return &user, nil

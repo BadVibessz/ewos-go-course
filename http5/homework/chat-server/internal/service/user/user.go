@@ -3,10 +3,12 @@ package user
 import (
 	"context"
 
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+	"golang.org/x/crypto/bcrypt"
 
-	usermapper "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/mapper/user"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/mapper"
 )
 
 type UserRepo interface {
@@ -28,14 +30,21 @@ func NewUserService(ur UserRepo) *UserService {
 	return &UserService{UserRepo: ur}
 }
 
-func (us *UserService) RegisterUser(ctx context.Context, user dto.UserDTO) (*model.User, error) {
+func (us *UserService) RegisterUser(ctx context.Context, user entity.User) (*model.User, error) {
 	// ensure that user with this email and username does not exist
 	err := us.UserRepo.CheckUniqueConstraints(ctx, user.Email, user.Username)
 	if err != nil {
 		return nil, err
 	}
 
-	created, err := us.UserRepo.AddUser(ctx, usermapper.MapUserDtoToUser(&user))
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.HashedPassword), bcrypt.DefaultCost) // user model sent with plain password
+	if err != nil {
+		return nil, err
+	}
+
+	user.HashedPassword = string(hash)
+
+	created, err := us.UserRepo.AddUser(ctx, mapper.MapUserDtoToUser(&user))
 	if err != nil {
 		return nil, err
 	}
@@ -70,12 +79,12 @@ func (us *UserService) GetUserByUsername(ctx context.Context, username string) (
 	return user, nil
 }
 
-func (us *UserService) GetAllUsers(ctx context.Context, offset, limit int) []*model.User {
-	return us.UserRepo.GetAllUsers(ctx, offset, limit)
+func (us *UserService) GetAllUsers(ctx context.Context, paginationOpts request.PaginationOptions) []*model.User {
+	return us.UserRepo.GetAllUsers(ctx, paginationOpts.Offset, paginationOpts.Limit)
 }
 
-func (us *UserService) UpdateUser(ctx context.Context, id int, updateModel dto.UserDTO) (*model.User, error) {
-	user := usermapper.MapUserDtoToUser(&updateModel)
+func (us *UserService) UpdateUser(ctx context.Context, id int, updateModel entity.User) (*model.User, error) {
+	user := mapper.MapUserDtoToUser(&updateModel)
 
 	updated, err := us.UserRepo.UpdateUser(ctx, id, user)
 	if err != nil {

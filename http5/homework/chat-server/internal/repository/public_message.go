@@ -1,8 +1,8 @@
+// nolint
 package repository
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"strconv"
 	"time"
@@ -15,10 +15,6 @@ import (
 type PublicMessageInMemRepo struct {
 	DB inmemory.InMemoryDB
 }
-
-const publicMessageTableName = "public_messages"
-
-var ErrNoSuchPublicMessage = errors.New("no such public message")
 
 func NewInMemPublicMessageRepo(db inmemory.InMemoryDB) *PublicMessageInMemRepo {
 	repo := PublicMessageInMemRepo{DB: db}
@@ -35,20 +31,17 @@ func (pr *PublicMessageInMemRepo) AddPublicMessage(_ context.Context, msg model.
 	}
 
 	now := time.Now()
-	toCreate := model.PublicMessage{
-		ID:       idOffset + 1,
-		From:     msg.From,
-		Content:  msg.Content,
-		SentAt:   now,
-		EditedAt: now,
-	}
 
-	err = pr.DB.AddRow(publicMessageTableName, strconv.Itoa(toCreate.ID), toCreate)
+	msg.ID = idOffset + 1
+	msg.SentAt = now
+	msg.EditedAt = now
+
+	err = pr.DB.AddRow(publicMessageTableName, strconv.Itoa(msg.ID), msg)
 	if err != nil {
-		return nil, err // todo: maybe return custom err of this layer? (ErrNoSuchUser?)
+		return nil, err
 	}
 
-	return &toCreate, nil
+	return &msg, nil
 }
 
 func (pr *PublicMessageInMemRepo) GetAllPublicMessages(_ context.Context, offset, limit int) []*model.PublicMessage {

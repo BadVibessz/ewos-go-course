@@ -1,7 +1,8 @@
-package user
+package mapper
 
 import (
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/response"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 )
@@ -16,10 +17,10 @@ func MapUserToUserResponse(user *model.User) response.UserResponse {
 	}
 }
 
-func MapUserDtoToUser(user *dto.UserDTO) model.User {
-	return model.User{
-		Email:          user.Email,
-		Username:       user.Username,
-		HashedPassword: user.HashedPassword,
+func MapRegisterRequestToUserEntity(registerReq *request.RegisterRequest) entity.User {
+	return entity.User{
+		Email:          registerReq.Email,
+		Username:       registerReq.Username,
+		HashedPassword: registerReq.Password,
 	}
 }

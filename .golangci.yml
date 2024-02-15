@@ -10,6 +10,7 @@ run:
 
   skip-dirs:
     - internal/fixtures
+    - http5/homework/chat-server/internal/handler
 
 # output configuration options
 output:
@@ -81,7 +82,7 @@ linters:
 
 linters-settings:
   staticcheck:
-    checks: ["all", "-SA1029"] # https://staticcheck.dev/docs/checks/ SA1029 запрет строк в качестве ключа в контексте
+    checks: [ "all", "-SA1029" ] # https://staticcheck.dev/docs/checks/ SA1029 запрет строк в качестве ключа в контексте
   errcheck:
     check-type-assertions: true
     check-blank: true

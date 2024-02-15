@@ -3,15 +3,14 @@ package fixtures
 
 import (
 	"context"
-
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
+	entity2 "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 
 	messageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
 	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
 )
 
 func LoadFixtures(ctx context.Context, us *userservice.UserService, ms *messageservice.MessageService) {
-	users := []dto.UserDTO{
+	users := []entity2.User{
 		{
 			Username:       "test",
 			Email:          "test@mail.ru",
@@ -36,7 +35,7 @@ func LoadFixtures(ctx context.Context, us *userservice.UserService, ms *messages
 		}
 	}
 
-	pubMessages := []dto.PublicMessageDTO{
+	pubMessages := []entity2.PublicMessage{
 		{
 			FromID:  1,
 			Content: "Hello everyone, I'm Test!",
@@ -58,7 +57,7 @@ func LoadFixtures(ctx context.Context, us *userservice.UserService, ms *messages
 		}
 	}
 
-	privMessages := []dto.PrivateMessageDTO{
+	privMessages := []entity2.PrivateMessage{
 		{
 			FromID:  1,
 			ToID:    2,

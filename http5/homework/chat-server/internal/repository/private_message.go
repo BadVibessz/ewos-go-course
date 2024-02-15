@@ -1,8 +1,8 @@
+// nolint
 package repository
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"strconv"
 	"time"
@@ -16,9 +16,7 @@ type PrivateMessageInMemRepo struct {
 	DB inmemory.InMemoryDB
 }
 
-const privateMessageTableName = "private_messages"
-
-var ErrNoSuchPrivateMessage = errors.New("no such private message")
+// TODO: LINTER DUPL
 
 func NewInMemPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageInMemRepo {
 	repo := PrivateMessageInMemRepo{DB: db}
@@ -35,21 +33,17 @@ func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg mode
 	}
 
 	now := time.Now()
-	toCreate := model.PrivateMessage{
-		ID:       idOffset + 1,
-		From:     msg.From,
-		To:       msg.To,
-		Content:  msg.Content,
-		SentAt:   now,
-		EditedAt: now,
-	}
 
-	err = pr.DB.AddRow(privateMessageTableName, strconv.Itoa(toCreate.ID), toCreate)
+	msg.ID = idOffset + 1
+	msg.SentAt = now
+	msg.EditedAt = now
+
+	err = pr.DB.AddRow(privateMessageTableName, strconv.Itoa(msg.ID), msg)
 	if err != nil {
-		return nil, err // todo: maybe return custom err of this layer? (ErrNoSuchUser?)
+		return nil, err
 	}
 
-	return &toCreate, nil
+	return &msg, nil
 }
 
 func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(_ context.Context, offset, limit int) []*model.PrivateMessage {

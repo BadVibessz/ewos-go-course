@@ -4,33 +4,36 @@ package handler
 import (
 	"context"
 	"fmt"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"math"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/dto"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/mapper"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/middleware"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 
-	usermapper "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/mapper/user"
+	handlerinternalutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/handler"
 	handlerutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/handler"
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
 type UserService interface {
-	RegisterUser(ctx context.Context, user dto.UserDTO) (*model.User, error)
+	RegisterUser(ctx context.Context, user entity.User) (*model.User, error)
 	GetUserByID(ctx context.Context, id int) (*model.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
-	GetAllUsers(ctx context.Context, offset, limit int) []*model.User
-	UpdateUser(ctx context.Context, id int, updateModel dto.UserDTO) (*model.User, error)
+	GetAllUsers(ctx context.Context, paginationOpts request.PaginationOptions) []*model.User
+	UpdateUser(ctx context.Context, id int, updateModel entity.User) (*model.User, error)
 	DeleteUser(ctx context.Context, id int) (*model.User, error)
+}
+
+type MessageService interface {
+	GetAllPrivateMessages(ctx context.Context, toID int, paginateOpts request.PaginationOptions) []*model.PrivateMessage
 }
 
 type UserHandler struct {
@@ -38,7 +41,6 @@ type UserHandler struct {
 	MessageService MessageService
 	AuthService    middleware.AuthService
 	logger         *logrus.Logger
-	validator      *validator.Validate
 }
 
 func NewUserHandler(us UserService, ms MessageService, as middleware.AuthService, logger *logrus.Logger) *UserHandler {
@@ -47,7 +49,6 @@ func NewUserHandler(us UserService, ms MessageService, as middleware.AuthService
 		MessageService: ms,
 		AuthService:    as,
 		logger:         logger,
-		validator:      validator.New(validator.WithRequiredStructEnabled()),
 	}
 }
 
@@ -92,7 +93,7 @@ func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = uh.validator.Struct(registerReq)
+	err = registerReq.Validate()
 	if err != nil {
 		logMsg := fmt.Sprintf("error occurred validating RegisterRequest struct: %s", err)
 		respMsg := fmt.Sprintf("invalid registration data provided: %s", err)
@@ -102,32 +103,17 @@ func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// todo: understand what is bcrypt.cost!
-	hash, err := bcrypt.GenerateFromPassword([]byte(registerReq.Password), bcrypt.DefaultCost)
+	user, err := uh.UserService.RegisterUser(req.Context(), mapper.MapRegisterRequestToUserEntity(&registerReq))
 	if err != nil {
-		logMsg := fmt.Sprintf("error occurred generating hash from password: %s", err)
-		respMsg := fmt.Sprintf("error occurred generating hash from password: %s", err)
+		logMsg := fmt.Sprintf("error occurred registrating user: %v", err)
+		respMsg := fmt.Sprintf("error occurred registrating user: %v", err)
 
-		handlerutils.WriteErrResponseAndLog(rw, uh.logger, http.StatusInternalServerError, logMsg, respMsg)
-	}
-
-	createModel := dto.UserDTO{
-		Email:          registerReq.Email,
-		Username:       registerReq.Username,
-		HashedPassword: string(hash),
-	}
-
-	ctx := req.Context()
-
-	user, err := uh.UserService.RegisterUser(ctx, createModel)
-	if err != nil {
-		handlerutils.WriteErrResponseAndLog(rw, uh.logger, http.StatusBadRequest,
-			"", fmt.Sprintf("invalid registration data provided: %s", err))
+		handlerutils.WriteErrResponseAndLog(rw, uh.logger, http.StatusBadRequest, logMsg, respMsg)
 
 		return
 	}
 
-	render.JSON(rw, req, usermapper.MapUserToUserResponse(user))
+	render.JSON(rw, req, mapper.MapUserToUserResponse(user))
 	rw.WriteHeader(http.StatusCreated)
 }
 
@@ -142,10 +128,19 @@ func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) {
 //	@Failure		401	{string}	Unauthorized
 //	@Router			/users/all [get]
 func (uh *UserHandler) GetAll(rw http.ResponseWriter, req *http.Request) {
-	offset, limit := handlerutils.GetOffsetAndLimitFromQuery(req, defaultOffset, defaultLimit)
+	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, defaultOffset, defaultLimit)
 
-	users := uh.UserService.GetAllUsers(req.Context(), offset, limit)
-	resp := sliceutils.Map(users, usermapper.MapUserToUserResponse)
+	err := paginationOpts.Validate()
+	if err != nil {
+		respMsg := fmt.Sprintf("%v", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, uh.logger, http.StatusBadRequest, "", respMsg)
+
+		return
+	}
+
+	users := uh.UserService.GetAllUsers(req.Context(), paginationOpts)
+	resp := sliceutils.Map(users, mapper.MapUserToUserResponse)
 
 	render.JSON(rw, req, resp)
 
@@ -169,12 +164,13 @@ func (uh *UserHandler) GetAllUsersThatSentMessage(rw http.ResponseWriter, req *h
 		return
 	}
 
-	messages := uh.MessageService.GetAllPrivateMessages(req.Context(), id, 0, math.MaxInt64)
+	paginateOpts := request.NewPaginationOptions(0, math.MaxInt64)
+	messages := uh.MessageService.GetAllPrivateMessages(req.Context(), id, paginateOpts)
 
 	usersDuplicates := sliceutils.Map(messages, func(msg *model.PrivateMessage) *model.User { return msg.From })
 	users := sliceutils.Unique(usersDuplicates)
 
-	resp := sliceutils.Map(users, usermapper.MapUserToUserResponse)
+	resp := sliceutils.Map(users, mapper.MapUserToUserResponse)
 
 	render.JSON(rw, req, resp)
 
