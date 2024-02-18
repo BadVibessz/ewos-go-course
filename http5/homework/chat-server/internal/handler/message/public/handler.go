@@ -1,11 +1,13 @@
 // nolint
-package handler
+package public
 
 import (
 	"context"
 	"fmt"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/mapper"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware"
 	handlerinternalutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/handler"
 	"net/http"
 
@@ -14,7 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/middleware"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 
 	handlerutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/handler"
@@ -27,30 +28,44 @@ type PublicMessageService interface {
 	GetAllPublicMessages(ctx context.Context, paginationOpts request.PaginationOptions) []*model.PublicMessage
 }
 
-type PublicMessageHandler struct {
+type UserService interface {
+	RegisterUser(ctx context.Context, user entity.User) (*model.User, error)
+	GetUserByID(ctx context.Context, id int) (*model.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
+	GetAllUsers(ctx context.Context, paginationOpts request.PaginationOptions) []*model.User
+	UpdateUser(ctx context.Context, id int, updateModel entity.User) (*model.User, error)
+	DeleteUser(ctx context.Context, id int) (*model.User, error)
+}
+
+type AuthService interface {
+	Login(ctx context.Context, loginReq request.LoginRequest) (*model.User, error)
+}
+
+type Handler struct {
 	MessageService PublicMessageService
 	UserService    UserService
-	AuthService    middleware.AuthService
+	AuthService    AuthService
 	logger         *logrus.Logger
 }
 
-func NewPublicMessageHandler(ms PublicMessageService, us UserService, as middleware.AuthService, logger *logrus.Logger) *PublicMessageHandler {
-	return &PublicMessageHandler{
-		MessageService: ms,
-		UserService:    us,
-		AuthService:    as,
+func New(publicMessageService PublicMessageService, userService UserService, authService AuthService, logger *logrus.Logger) *Handler {
+	return &Handler{
+		MessageService: publicMessageService,
+		UserService:    userService,
+		AuthService:    authService,
 		logger:         logger,
 	}
 }
 
-func (mh *PublicMessageHandler) Routes() *chi.Mux {
+func (h *Handler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(mh.AuthService, mh.logger))
+		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger))
 
-		r.Get("/", mh.GetAllPublicMessages)
-		r.Post("/", mh.SendPublicMessage)
+		r.Get("/", h.GetAllPublicMessages)
+		r.Post("/", h.SendPublicMessage)
 	})
 
 	return router
@@ -67,25 +82,19 @@ func (mh *PublicMessageHandler) Routes() *chi.Mux {
 //	@Param			limit	query		int	true	"Limit"
 //	@Success		200		{object}	[]response.PublicMessageResponse
 //	@Failure		401		{string}	Unauthorized
-//	@Router			/messages/public [get]
-func (mh *PublicMessageHandler) GetAllPublicMessages(rw http.ResponseWriter, req *http.Request) {
-	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, defaultOffset, defaultLimit)
+//	@Router			/api/v1/messages/public [get]
+func (h *Handler) GetAllPublicMessages(rw http.ResponseWriter, req *http.Request) {
+	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, handler.DefaultOffset, handler.DefaultLimit)
 
-	err := paginationOpts.Validate()
-	if err != nil {
-		respMsg := fmt.Sprintf("%v", err)
-
-		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, "", respMsg)
+	if err := paginationOpts.Validate(); err != nil {
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, "", err.Error())
 
 		return
 	}
 
-	messages := mh.MessageService.GetAllPublicMessages(req.Context(), paginationOpts)
+	messages := h.MessageService.GetAllPublicMessages(req.Context(), paginationOpts)
 
-	resp := sliceutils.Map(messages, mapper.MapPublicMessageToResponse)
-
-	render.JSON(rw, req, resp)
-
+	render.JSON(rw, req, sliceutils.Map(messages, mapper.MapPublicMessageToResponse))
 	rw.WriteHeader(http.StatusOK)
 }
 
@@ -101,22 +110,21 @@ func (mh *PublicMessageHandler) GetAllPublicMessages(rw http.ResponseWriter, req
 //	@Success		200		{object}	[]response.PublicMessageResponse
 //	@Failure		401		{string}	Unauthorized
 //	@Failure		500		{string}	internal	error
-//	@Router			/messages/public [post]
-func (mh *PublicMessageHandler) SendPublicMessage(rw http.ResponseWriter, req *http.Request) {
+//	@Router			/api/v1/messages/public [post]
+func (h *Handler) SendPublicMessage(rw http.ResponseWriter, req *http.Request) {
 	id, err := handlerutils.GetIntHeaderByKey(req, "id")
 	if err != nil {
-		rw.WriteHeader(http.StatusUnauthorized)
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusUnauthorized, "", err.Error())
 		return
 	}
 
 	var pubMsgReq request.SendPublicMessageRequest
 
-	err = render.DecodeJSON(req.Body, &pubMsgReq)
-	if err != nil {
+	if err = render.DecodeJSON(req.Body, &pubMsgReq); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating PublicMessageRequest struct: %s", err)
 		respMsg := fmt.Sprintf("invalid message provided: %s", err)
 
-		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, logMsg, respMsg)
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, logMsg, respMsg)
 
 		return
 	}
@@ -127,24 +135,22 @@ func (mh *PublicMessageHandler) SendPublicMessage(rw http.ResponseWriter, req *h
 		logMsg := fmt.Sprintf("error occurred validating PublicMessageRequest struct: %s", err)
 		respMsg := fmt.Sprintf("invalid message provided: %s", err)
 
-		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusBadRequest, logMsg, respMsg)
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, logMsg, respMsg)
 
 		return
 	}
 
 	msg := mapper.MapPublicMessageRequestToEntity(&pubMsgReq)
 
-	message, err := mh.MessageService.SendPublicMessage(req.Context(), msg)
+	message, err := h.MessageService.SendPublicMessage(req.Context(), msg)
 	if err != nil {
 		logMsg := fmt.Sprintf("error occurred saving public message: %s", err)
 
-		handlerutils.WriteErrResponseAndLog(rw, mh.logger, http.StatusInternalServerError, logMsg, "")
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusInternalServerError, logMsg, "")
 
 		return
 	}
 
-	resp := mapper.MapPublicMessageToResponse(message)
-
-	render.JSON(rw, req, resp)
+	render.JSON(rw, req, mapper.MapPublicMessageToResponse(message))
 	rw.WriteHeader(http.StatusCreated)
 }

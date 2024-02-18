@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	privatemessagehandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/message/private"
+	publicmessagehandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/message/public"
+	userhandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/user"
+
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/fixtures"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,8 +18,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
 
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/fixtures"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/router"
@@ -31,18 +34,19 @@ import (
 //	@version		1.0
 //	@description	API Server for Web Chat
 
-//	@BasePath	/chat/api/v1
+//	@BasePath	/chat
 
 //	@securityDefinitions.basic	BasicAuth
 //	@in							header
 //	@name						Authorization
 
 const ( // todo: config file
-	dbSavePath = "http5/homework/chat-server/internal/db/db_state.json"
-	port       = 5000
+	dbSavePath   = "http5/homework/chat-server/internal/db/db_state.json"
+	port         = 5000
+	loadFixtures = true
 )
 
-func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
+func initDB(ctx context.Context, loadFixtures bool) (*inmemory.InMemDB, <-chan any) {
 	var inMemDB *inmemory.InMemDB
 
 	var savedChan <-chan any
@@ -50,17 +54,21 @@ func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	dbStateRestored := true
 
 	jsonDb, err := os.ReadFile(dbSavePath)
-	if err == nil {
+	if err != nil {
+		dbStateRestored = false
+	} else {
 		inMemDB, savedChan, err = inmemory.NewInMemDBFromJSON(ctx, string(jsonDb), dbSavePath)
 		if err != nil {
 			dbStateRestored = false
 		}
-	} else {
-		dbStateRestored = false
 	}
 
 	if !dbStateRestored {
 		inMemDB, savedChan = inmemory.NewInMemDB(ctx, dbSavePath)
+	}
+
+	if loadFixtures {
+		fixtures.LoadFixtures(inMemDB)
 	}
 
 	return inMemDB, savedChan
@@ -83,14 +91,12 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	inMemDB, savedChan := initDB(ctx)
+	inMemDB, savedChan := initDB(ctx, loadFixtures)
 	userService, messageService, authService := initInMemServices(inMemDB)
 
-	fixtures.LoadFixtures(ctx, userService, messageService) // todo: maybe load fixtures via db layer, not service?
-
-	userHandler := handler.NewUserHandler(userService, messageService, authService, logger)
-	publicMessageHandler := handler.NewPublicMessageHandler(messageService, userService, authService, logger)
-	privateMessageHandler := handler.NewPrivateMessageHandler(messageService, userService, authService, logger)
+	userHandler := userhandler.New(userService, messageService, authService, logger)
+	publicMessageHandler := publicmessagehandler.New(messageService, userService, authService, logger)
+	privateMessageHandler := privatemessagehandler.New(messageService, userService, authService, logger)
 
 	routers := make(map[string]chi.Router)
 

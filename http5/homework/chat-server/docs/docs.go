@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/messages/private": {
+        "/api/v1/messages/private": {
             "get": {
                 "security": [
                     {
@@ -123,7 +123,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/messages/private/user/{user_id}": {
+        "/api/v1/messages/private/user/{user_id}": {
             "get": {
                 "security": [
                     {
@@ -180,7 +180,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/messages/public": {
+        "/api/v1/messages/public": {
             "get": {
                 "security": [
                     {
@@ -282,7 +282,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/all": {
+        "/api/v1/users/all": {
             "get": {
                 "security": [
                     {
@@ -316,7 +316,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/messages": {
+        "/api/v1/users/messages": {
             "get": {
                 "security": [
                     {
@@ -350,7 +350,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/users/register": {
+        "/api/v1/users/register": {
             "post": {
                 "description": "to register new user",
                 "consumes": [
@@ -426,7 +426,9 @@ const docTemplate = `{
         "request.SendPrivateMessageRequest": {
             "type": "object",
             "required": [
-                "content"
+                "content",
+                "from_id",
+                "to_id"
             ],
             "properties": {
                 "content": {
@@ -434,21 +436,31 @@ const docTemplate = `{
                     "maxLength": 2000,
                     "minLength": 1
                 },
+                "from_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "to_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },
         "request.SendPublicMessageRequest": {
             "type": "object",
             "required": [
-                "content"
+                "content",
+                "from_id"
             ],
             "properties": {
                 "content": {
                     "type": "string",
                     "maxLength": 2000,
                     "minLength": 1
+                },
+                "from_id": {
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },
@@ -521,7 +533,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "",
-	BasePath:         "/chat/api/v1",
+	BasePath:         "/chat",
 	Schemes:          []string{},
 	Title:            "Chat API",
 	Description:      "API Server for Web Chat",

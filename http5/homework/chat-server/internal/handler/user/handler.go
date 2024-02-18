@@ -1,20 +1,20 @@
 // nolint
-package handler
+package user
 
 import (
 	"context"
 	"fmt"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
-	"math"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/sirupsen/logrus"
 
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/mapper"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/middleware"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 
 	handlerinternalutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/handler"
@@ -36,33 +36,37 @@ type MessageService interface {
 	GetAllPrivateMessages(ctx context.Context, toID int, paginateOpts request.PaginationOptions) []*model.PrivateMessage
 }
 
-type UserHandler struct {
+type AuthService interface {
+	Login(ctx context.Context, loginReq request.LoginRequest) (*model.User, error)
+}
+
+type Handler struct {
 	UserService    UserService
 	MessageService MessageService
-	AuthService    middleware.AuthService
+	AuthService    AuthService
 	logger         *logrus.Logger
 }
 
-func NewUserHandler(us UserService, ms MessageService, as middleware.AuthService, logger *logrus.Logger) *UserHandler {
-	return &UserHandler{
-		UserService:    us,
-		MessageService: ms,
-		AuthService:    as,
+func New(userService UserService, messageService MessageService, authService AuthService, logger *logrus.Logger) *Handler {
+	return &Handler{
+		UserService:    userService,
+		MessageService: messageService,
+		AuthService:    authService,
 		logger:         logger,
 	}
 }
 
-func (uh *UserHandler) Routes() *chi.Mux {
+func (h *Handler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
-		r.Post("/register", uh.Register)
+		r.Post("/register", h.Register)
 	})
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(uh.AuthService, uh.logger))
-		r.Get("/all", uh.GetAll)
-		r.Get("/messages", uh.GetAllUsersThatSentMessage)
+		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger))
+		r.Get("/all", h.GetAll)
+		r.Get("/messages", h.GetAllUsersThatSentMessage)
 	})
 
 	return router
@@ -79,36 +83,33 @@ func (uh *UserHandler) Routes() *chi.Mux {
 //	@Success		200		{object}	response.UserResponse
 //	@Failure		400		{string}	invalid		registration	data	provided
 //	@Failure		500		{string}	internal	error
-//	@Router			/users/register [post]
-func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) {
-	registerReq := request.RegisterRequest{}
+//	@Router			/api/v1/users/register [post]
+func (h *Handler) Register(rw http.ResponseWriter, req *http.Request) {
+	var registerReq request.RegisterRequest
 
-	err := render.DecodeJSON(req.Body, &registerReq)
-	if err != nil {
-		logMsg := fmt.Sprintf("error occurred decoding request body to RegisterRequest struct: %s", err)
-		respMsg := fmt.Sprintf("invalid registration data provided: %s", err)
+	if err := render.DecodeJSON(req.Body, &registerReq); err != nil {
+		logMsg := fmt.Sprintf("error occurred decoding request body to RegisterRequest struct: %v", err)
+		respMsg := fmt.Sprintf("invalid registration data provided: %v", err)
 
-		handlerutils.WriteErrResponseAndLog(rw, uh.logger, http.StatusBadRequest, logMsg, respMsg)
-
-		return
-	}
-
-	err = registerReq.Validate()
-	if err != nil {
-		logMsg := fmt.Sprintf("error occurred validating RegisterRequest struct: %s", err)
-		respMsg := fmt.Sprintf("invalid registration data provided: %s", err)
-
-		handlerutils.WriteErrResponseAndLog(rw, uh.logger, http.StatusBadRequest, logMsg, respMsg)
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, logMsg, respMsg)
 
 		return
 	}
 
-	user, err := uh.UserService.RegisterUser(req.Context(), mapper.MapRegisterRequestToUserEntity(&registerReq))
-	if err != nil {
-		logMsg := fmt.Sprintf("error occurred registrating user: %v", err)
-		respMsg := fmt.Sprintf("error occurred registrating user: %v", err)
+	if err := registerReq.Validate(); err != nil {
+		logMsg := fmt.Sprintf("error occurred validating RegisterRequest struct: %v", err)
+		respMsg := fmt.Sprintf("invalid registration data provided: %v", err)
 
-		handlerutils.WriteErrResponseAndLog(rw, uh.logger, http.StatusBadRequest, logMsg, respMsg)
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, logMsg, respMsg)
+
+		return
+	}
+
+	user, err := h.UserService.RegisterUser(req.Context(), mapper.MapRegisterRequestToUserEntity(&registerReq))
+	if err != nil {
+		msg := fmt.Sprintf("error occurred registrating user: %v", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusInternalServerError, msg, msg)
 
 		return
 	}
@@ -126,24 +127,19 @@ func (uh *UserHandler) Register(rw http.ResponseWriter, req *http.Request) {
 //	@Produce		json
 //	@Success		200	{object}	[]response.UserResponse
 //	@Failure		401	{string}	Unauthorized
-//	@Router			/users/all [get]
-func (uh *UserHandler) GetAll(rw http.ResponseWriter, req *http.Request) {
-	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, defaultOffset, defaultLimit)
+//	@Router			/api/v1/users/all [get]
+func (h *Handler) GetAll(rw http.ResponseWriter, req *http.Request) {
+	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, handler.DefaultOffset, handler.DefaultLimit)
 
-	err := paginationOpts.Validate()
-	if err != nil {
-		respMsg := fmt.Sprintf("%v", err)
-
-		handlerutils.WriteErrResponseAndLog(rw, uh.logger, http.StatusBadRequest, "", respMsg)
+	if err := paginationOpts.Validate(); err != nil {
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, "", err.Error())
 
 		return
 	}
 
-	users := uh.UserService.GetAllUsers(req.Context(), paginationOpts)
-	resp := sliceutils.Map(users, mapper.MapUserToUserResponse)
+	users := h.UserService.GetAllUsers(req.Context(), paginationOpts)
 
-	render.JSON(rw, req, resp)
-
+	render.JSON(rw, req, sliceutils.Map(users, mapper.MapUserToUserResponse))
 	rw.WriteHeader(http.StatusOK)
 }
 
@@ -156,23 +152,21 @@ func (uh *UserHandler) GetAll(rw http.ResponseWriter, req *http.Request) {
 //	@Produce		json
 //	@Success		200	{object}	[]response.UserResponse
 //	@Failure		401	{string}	Unauthorized
-//	@Router			/users/messages [get]
-func (uh *UserHandler) GetAllUsersThatSentMessage(rw http.ResponseWriter, req *http.Request) {
+//	@Router			/api/v1/users/messages [get]
+func (h *Handler) GetAllUsersThatSentMessage(rw http.ResponseWriter, req *http.Request) {
 	id, err := handlerutils.GetIntHeaderByKey(req, "id")
 	if err != nil {
-		rw.WriteHeader(http.StatusUnauthorized)
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusUnauthorized, "", err.Error())
 		return
 	}
 
-	paginateOpts := request.NewPaginationOptions(0, math.MaxInt64)
-	messages := uh.MessageService.GetAllPrivateMessages(req.Context(), id, paginateOpts)
+	paginateOpts := request.GetUnlimitedPaginationOptions()
+
+	messages := h.MessageService.GetAllPrivateMessages(req.Context(), id, paginateOpts)
 
 	usersDuplicates := sliceutils.Map(messages, func(msg *model.PrivateMessage) *model.User { return msg.From })
 	users := sliceutils.Unique(usersDuplicates)
 
-	resp := sliceutils.Map(users, mapper.MapUserToUserResponse)
-
-	render.JSON(rw, req, resp)
-
+	render.JSON(rw, req, sliceutils.Map(users, mapper.MapUserToUserResponse))
 	rw.WriteHeader(http.StatusOK)
 }

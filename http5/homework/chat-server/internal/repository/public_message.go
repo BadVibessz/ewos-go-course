@@ -19,13 +19,16 @@ type PublicMessageInMemRepo struct {
 func NewInMemPublicMessageRepo(db inmemory.InMemoryDB) *PublicMessageInMemRepo {
 	repo := PublicMessageInMemRepo{DB: db}
 
-	repo.DB.CreateTable(publicMessageTableName)
+	_, err := repo.DB.GetTable(PublicMessageTableName)
+	if err != nil {
+		repo.DB.CreateTable(PublicMessageTableName)
+	}
 
 	return &repo
 }
 
 func (pr *PublicMessageInMemRepo) AddPublicMessage(_ context.Context, msg model.PublicMessage) (*model.PublicMessage, error) {
-	idOffset, err := pr.DB.GetRowsCount(publicMessageTableName)
+	idOffset, err := pr.DB.GetRowsCount(PublicMessageTableName)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +39,7 @@ func (pr *PublicMessageInMemRepo) AddPublicMessage(_ context.Context, msg model.
 	msg.SentAt = now
 	msg.EditedAt = now
 
-	err = pr.DB.AddRow(publicMessageTableName, strconv.Itoa(msg.ID), msg)
+	err = pr.DB.AddRow(PublicMessageTableName, strconv.Itoa(msg.ID), msg)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +48,7 @@ func (pr *PublicMessageInMemRepo) AddPublicMessage(_ context.Context, msg model.
 }
 
 func (pr *PublicMessageInMemRepo) GetAllPublicMessages(_ context.Context, offset, limit int) []*model.PublicMessage {
-	rows, err := pr.DB.GetAllRows(publicMessageTableName, offset, limit)
+	rows, err := pr.DB.GetAllRows(PublicMessageTableName, offset, limit)
 	if err != nil {
 		return nil
 	}
@@ -65,7 +68,7 @@ func (pr *PublicMessageInMemRepo) GetAllPublicMessages(_ context.Context, offset
 }
 
 func (pr *PublicMessageInMemRepo) GetPublicMessage(_ context.Context, id int) (*model.PublicMessage, error) {
-	row, err := pr.DB.GetRow(publicMessageTableName, strconv.Itoa(id))
+	row, err := pr.DB.GetRow(PublicMessageTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, ErrNoSuchPublicMessage
 	}

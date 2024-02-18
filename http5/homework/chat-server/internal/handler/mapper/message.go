@@ -7,8 +7,8 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 )
 
-func MapPublicMessageToResponse(msg *model.PublicMessage) response.PublicMessageResponse {
-	return response.PublicMessageResponse{
+func MapPublicMessageToResponse(msg *model.PublicMessage) response.GetPublicMessageResponse {
+	return response.GetPublicMessageResponse{
 		FromUsername: msg.From.Username,
 		Content:      msg.Content,
 		SentAt:       msg.SentAt,
@@ -23,8 +23,8 @@ func MapPublicMessageRequestToEntity(req *request.SendPublicMessageRequest) enti
 	}
 }
 
-func MapPrivateMessageToResponse(msg *model.PrivateMessage) response.PrivateMessageResponse {
-	return response.PrivateMessageResponse{
+func MapPrivateMessageToResponse(msg *model.PrivateMessage) response.GetPrivateMessageResponse {
+	return response.GetPrivateMessageResponse{
 		FromUsername: msg.From.Username,
 		ToUsername:   msg.To.Username,
 		Content:      msg.Content,

@@ -21,13 +21,16 @@ type PrivateMessageInMemRepo struct {
 func NewInMemPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageInMemRepo {
 	repo := PrivateMessageInMemRepo{DB: db}
 
-	repo.DB.CreateTable(privateMessageTableName)
+	_, err := repo.DB.GetTable(PrivateMessageTableName)
+	if err != nil {
+		repo.DB.CreateTable(PrivateMessageTableName)
+	}
 
 	return &repo
 }
 
 func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg model.PrivateMessage) (*model.PrivateMessage, error) {
-	idOffset, err := pr.DB.GetRowsCount(privateMessageTableName)
+	idOffset, err := pr.DB.GetRowsCount(PrivateMessageTableName)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +41,7 @@ func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg mode
 	msg.SentAt = now
 	msg.EditedAt = now
 
-	err = pr.DB.AddRow(privateMessageTableName, strconv.Itoa(msg.ID), msg)
+	err = pr.DB.AddRow(PrivateMessageTableName, strconv.Itoa(msg.ID), msg)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +50,7 @@ func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg mode
 }
 
 func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(_ context.Context, offset, limit int) []*model.PrivateMessage {
-	rows, err := pr.DB.GetAllRows(privateMessageTableName, offset, limit)
+	rows, err := pr.DB.GetAllRows(PrivateMessageTableName, offset, limit)
 	if err != nil {
 		return nil
 	}
@@ -67,7 +70,7 @@ func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(_ context.Context, offs
 }
 
 func (pr *PrivateMessageInMemRepo) GetPrivateMessage(_ context.Context, id int) (*model.PrivateMessage, error) {
-	row, err := pr.DB.GetRow(privateMessageTableName, strconv.Itoa(id))
+	row, err := pr.DB.GetRow(PrivateMessageTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, ErrNoSuchPrivateMessage
 	}

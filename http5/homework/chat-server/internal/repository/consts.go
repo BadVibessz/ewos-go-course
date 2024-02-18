@@ -1,6 +1,7 @@
 package repository
 
 const (
-	privateMessageTableName = "private_messages"
-	publicMessageTableName  = "public_messages"
+	PrivateMessageTableName = "private_messages"
+	PublicMessageTableName  = "public_messages"
+	UserTableName           = "users"
 )

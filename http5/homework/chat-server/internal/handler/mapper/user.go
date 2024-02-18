@@ -7,8 +7,8 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 )
 
-func MapUserToUserResponse(user *model.User) response.UserResponse {
-	return response.UserResponse{
+func MapUserToUserResponse(user *model.User) response.GetUserResponse {
+	return response.GetUserResponse{
 		ID:        user.ID,
 		Username:  user.Username,
 		Email:     user.Email,

@@ -1,4 +1,4 @@
-basePath: /chat/api/v1
+basePath: /chat
 definitions:
   request.RegisterRequest:
     properties:
@@ -24,10 +24,16 @@ definitions:
         maxLength: 2000
         minLength: 1
         type: string
+      from_id:
+        minimum: 1
+        type: integer
       to_id:
+        minimum: 1
         type: integer
     required:
     - content
+    - from_id
+    - to_id
     type: object
   request.SendPublicMessageRequest:
     properties:
@@ -35,8 +41,12 @@ definitions:
         maxLength: 2000
         minLength: 1
         type: string
+      from_id:
+        minimum: 1
+        type: integer
     required:
     - content
+    - from_id
     type: object
   response.PrivateMessageResponse:
     properties:
@@ -81,7 +91,7 @@ info:
   title: Chat API
   version: "1.0"
 paths:
-  /messages/private:
+  /api/v1/messages/private:
     get:
       description: Get all private messages that were sent to chat
       parameters:
@@ -150,7 +160,7 @@ paths:
       summary: Send private message to user
       tags:
       - Message
-  /messages/private/user/{user_id}:
+  /api/v1/messages/private/user/{user_id}:
     get:
       description: Get all private messages from user
       parameters:
@@ -164,7 +174,7 @@ paths:
         name: limit
         required: true
         type: integer
-      - description: User ID
+      - description: User FromID
         in: path
         name: user_id
         required: true
@@ -187,7 +197,7 @@ paths:
       summary: Get all private messages from user
       tags:
       - Message
-  /messages/public:
+  /api/v1/messages/public:
     get:
       description: Get all public messages that were sent to chat
       parameters:
@@ -252,7 +262,7 @@ paths:
       summary: Send public message to chat
       tags:
       - Message
-  /users/all:
+  /api/v1/users/all:
     get:
       description: Get all users
       produces:
@@ -273,7 +283,7 @@ paths:
       summary: Get all users
       tags:
       - User
-  /users/messages:
+  /api/v1/users/messages:
     get:
       description: Get all users that sent message to current user
       produces:
@@ -294,7 +304,7 @@ paths:
       summary: Get all users that sent message to current user
       tags:
       - User
-  /users/register:
+  /api/v1/users/register:
     post:
       consumes:
       - application/json

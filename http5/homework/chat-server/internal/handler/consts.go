@@ -1,6 +1,6 @@
 package handler
 
 const (
-	defaultOffset = 0
-	defaultLimit  = 100
+	DefaultOffset = 0
+	DefaultLimit  = 100
 )

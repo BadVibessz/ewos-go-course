@@ -13,8 +13,6 @@ import (
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
-const userTableName = "users"
-
 var (
 	ErrNoSuchUser     = errors.New("no such user")
 	ErrEmailExists    = errors.New("user with this email already exists")
@@ -28,13 +26,16 @@ type UserRepoInMemDB struct {
 func NewInMemUserRepo(db inmemory.InMemoryDB) *UserRepoInMemDB {
 	repo := UserRepoInMemDB{DB: db}
 
-	repo.DB.CreateTable(userTableName)
+	_, err := repo.DB.GetTable(UserTableName)
+	if err != nil {
+		repo.DB.CreateTable(UserTableName)
+	}
 
 	return &repo
 }
 
 func (ur *UserRepoInMemDB) GetAllUsers(_ context.Context, offset, limit int) []*model.User {
-	rows, err := ur.DB.GetAllRows(userTableName, offset, limit)
+	rows, err := ur.DB.GetAllRows(UserTableName, offset, limit)
 	if err != nil {
 		return nil
 	}
@@ -52,7 +53,7 @@ func (ur *UserRepoInMemDB) GetAllUsers(_ context.Context, offset, limit int) []*
 }
 
 func (ur *UserRepoInMemDB) AddUser(_ context.Context, user model.User) (*model.User, error) {
-	idOffset, err := ur.DB.GetRowsCount(userTableName)
+	idOffset, err := ur.DB.GetRowsCount(UserTableName)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +64,7 @@ func (ur *UserRepoInMemDB) AddUser(_ context.Context, user model.User) (*model.U
 	user.CreatedAt = now
 	user.UpdatedAt = now
 
-	err = ur.DB.AddRow(userTableName, strconv.Itoa(user.ID), user)
+	err = ur.DB.AddRow(UserTableName, strconv.Itoa(user.ID), user)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +73,7 @@ func (ur *UserRepoInMemDB) AddUser(_ context.Context, user model.User) (*model.U
 }
 
 func (ur *UserRepoInMemDB) GetUserByID(_ context.Context, id int) (*model.User, error) {
-	row, err := ur.DB.GetRow(userTableName, strconv.Itoa(id))
+	row, err := ur.DB.GetRow(UserTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, ErrNoSuchUser
 	}
@@ -124,7 +125,7 @@ func (ur *UserRepoInMemDB) DeleteUser(ctx context.Context, id int) (*model.User,
 		return nil, err
 	}
 
-	err = ur.DB.DropRow(userTableName, strconv.Itoa(id))
+	err = ur.DB.DropRow(UserTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, ErrNoSuchUser
 	}
@@ -142,7 +143,7 @@ func (ur *UserRepoInMemDB) UpdateUser(ctx context.Context, id int, updated model
 	updated.CreatedAt = user.CreatedAt
 	updated.UpdatedAt = time.Now()
 
-	err = ur.DB.AlterRow(userTableName, strconv.Itoa(id), updated)
+	err = ur.DB.AlterRow(UserTableName, strconv.Itoa(id), updated)
 	if err != nil {
 		return nil, ErrNoSuchUser
 	}

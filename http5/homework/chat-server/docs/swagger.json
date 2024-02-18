@@ -6,9 +6,9 @@
         "contact": {},
         "version": "1.0"
     },
-    "basePath": "/chat/api/v1",
+    "basePath": "/chat",
     "paths": {
-        "/messages/private": {
+        "/api/v1/messages/private": {
             "get": {
                 "security": [
                     {
@@ -116,7 +116,7 @@
                 }
             }
         },
-        "/messages/private/user/{user_id}": {
+        "/api/v1/messages/private/user/{user_id}": {
             "get": {
                 "security": [
                     {
@@ -148,7 +148,7 @@
                     },
                     {
                         "type": "integer",
-                        "description": "User ID",
+                        "description": "User FromID",
                         "name": "user_id",
                         "in": "path",
                         "required": true
@@ -173,7 +173,7 @@
                 }
             }
         },
-        "/messages/public": {
+        "/api/v1/messages/public": {
             "get": {
                 "security": [
                     {
@@ -275,7 +275,7 @@
                 }
             }
         },
-        "/users/all": {
+        "/api/v1/users/all": {
             "get": {
                 "security": [
                     {
@@ -309,7 +309,7 @@
                 }
             }
         },
-        "/users/messages": {
+        "/api/v1/users/messages": {
             "get": {
                 "security": [
                     {
@@ -343,7 +343,7 @@
                 }
             }
         },
-        "/users/register": {
+        "/api/v1/users/register": {
             "post": {
                 "description": "to register new user",
                 "consumes": [
@@ -419,7 +419,9 @@
         "request.SendPrivateMessageRequest": {
             "type": "object",
             "required": [
-                "content"
+                "content",
+                "from_id",
+                "to_id"
             ],
             "properties": {
                 "content": {
@@ -427,21 +429,31 @@
                     "maxLength": 2000,
                     "minLength": 1
                 },
+                "from_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
                 "to_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },
         "request.SendPublicMessageRequest": {
             "type": "object",
             "required": [
-                "content"
+                "content",
+                "from_id"
             ],
             "properties": {
                 "content": {
                     "type": "string",
                     "maxLength": 2000,
                     "minLength": 1
+                },
+                "from_id": {
+                    "type": "integer",
+                    "minimum": 1
                 }
             }
         },
