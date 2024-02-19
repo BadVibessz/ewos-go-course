@@ -3,14 +3,15 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware/mapper"
 	"net/http"
 	"strconv"
 
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
-
+	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
+
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware/mapper"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 
 	handlerutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/handler"
 )
@@ -18,10 +19,10 @@ import (
 type Handler = func(http.Handler) http.Handler
 
 type AuthService interface {
-	Login(ctx context.Context, loginReq request.LoginRequest) (*model.User, error)
+	Login(ctx context.Context, loginReq request.LoginRequest) (*entity.User, error)
 }
 
-func AuthMiddleware(authService AuthService, logger *logrus.Logger) Handler {
+func AuthMiddleware(authService AuthService, logger *logrus.Logger, valid *validator.Validate) Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			loginReq, err := mapper.MapBasicAuthToLoginRequest(req.BasicAuth())
@@ -34,7 +35,7 @@ func AuthMiddleware(authService AuthService, logger *logrus.Logger) Handler {
 				return
 			}
 
-			if err = loginReq.Validate(); err != nil {
+			if err = loginReq.Validate(valid); err != nil {
 				logMsg := fmt.Sprintf("error occurred while logging user: %v", err)
 				respMsg := fmt.Sprintf("error occurred while logging user: %v", err)
 

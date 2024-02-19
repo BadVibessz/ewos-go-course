@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"net/http"
 	"strconv"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/mapper"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 
 	messageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
 
@@ -27,24 +27,24 @@ import (
 )
 
 type PrivateMessageService interface {
-	SendPrivateMessage(ctx context.Context, createModel entity.PrivateMessage) (*model.PrivateMessage, error)
-	GetPrivateMessage(ctx context.Context, id int) (*model.PrivateMessage, error)
-	GetAllPrivateMessages(ctx context.Context, userToID int, paginationOpts request.PaginationOptions) []*model.PrivateMessage
-	GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, paginationOpts request.PaginationOptions) ([]*model.PrivateMessage, error)
+	SendPrivateMessage(ctx context.Context, fromID, toID int, content string) (*entity.PrivateMessage, error)
+	GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error)
+	GetAllPrivateMessages(ctx context.Context, userToID int, offset, limit int) []*entity.PrivateMessage
+	GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) ([]*entity.PrivateMessage, error)
 }
 
 type UserService interface {
-	RegisterUser(ctx context.Context, user entity.User) (*model.User, error)
-	GetUserByID(ctx context.Context, id int) (*model.User, error)
-	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
-	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
-	GetAllUsers(ctx context.Context, paginationOpts request.PaginationOptions) []*model.User
-	UpdateUser(ctx context.Context, id int, updateModel entity.User) (*model.User, error)
-	DeleteUser(ctx context.Context, id int) (*model.User, error)
+	RegisterUser(ctx context.Context, user entity.User) (*entity.User, error)
+	GetUserByID(ctx context.Context, id int) (*entity.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
+	GetAllUsers(ctx context.Context, offset, limit int) []*entity.User
+	UpdateUser(ctx context.Context, id int, updateModel entity.User) (*entity.User, error)
+	DeleteUser(ctx context.Context, id int) (*entity.User, error)
 }
 
 type AuthService interface {
-	Login(ctx context.Context, loginReq request.LoginRequest) (*model.User, error)
+	Login(ctx context.Context, loginReq request.LoginRequest) (*entity.User, error)
 }
 
 type Handler struct {
@@ -52,14 +52,17 @@ type Handler struct {
 	UserService    UserService
 	AuthService    AuthService
 	logger         *logrus.Logger
+	valid          *validator.Validate
 }
 
-func New(privateMessageService PrivateMessageService, userService UserService, authService AuthService, logger *logrus.Logger) *Handler {
+func New(privateMessageService PrivateMessageService, userService UserService, authService AuthService,
+	logger *logrus.Logger, valid *validator.Validate) *Handler {
 	return &Handler{
 		MessageService: privateMessageService,
 		UserService:    userService,
 		AuthService:    authService,
 		logger:         logger,
+		valid:          valid,
 	}
 }
 
@@ -67,7 +70,7 @@ func (h *Handler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger))
+		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.valid))
 
 		r.Get("/", h.GetAllPrivateMessages)
 		r.Post("/", h.SendPrivateMessage)
@@ -112,7 +115,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 
 	privMsgReq.FromID = id
 
-	if err = privMsgReq.Validate(); err != nil {
+	if err = privMsgReq.Validate(h.valid); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating PrivateMessageRequest struct: %v", err)
 		respMsg := fmt.Sprintf("invalid message provided: %v", err)
 
@@ -121,9 +124,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	msg := mapper.MapPrivateMessageRequestToEntity(&privMsgReq)
-
-	message, err := h.MessageService.SendPrivateMessage(req.Context(), msg)
+	message, err := h.MessageService.SendPrivateMessage(req.Context(), privMsgReq.FromID, privMsgReq.ToID, privMsgReq.Content)
 
 	if err != nil {
 		switch {
@@ -168,13 +169,13 @@ func (h *Handler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Reques
 
 	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, handler.DefaultOffset, handler.DefaultLimit)
 
-	if err = paginationOpts.Validate(); err != nil {
+	if err = paginationOpts.Validate(h.valid); err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, "", err.Error())
 
 		return
 	}
 
-	messages := h.MessageService.GetAllPrivateMessages(req.Context(), id, paginationOpts)
+	messages := h.MessageService.GetAllPrivateMessages(req.Context(), id, paginationOpts.Offset, paginationOpts.Limit)
 
 	render.JSON(rw, req, sliceutils.Map(messages, mapper.MapPrivateMessageToResponse))
 	rw.WriteHeader(http.StatusOK)
@@ -210,13 +211,13 @@ func (h *Handler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, req *htt
 
 	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, handler.DefaultOffset, handler.DefaultLimit)
 
-	if err = paginationOpts.Validate(); err != nil {
+	if err = paginationOpts.Validate(h.valid); err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, "", err.Error())
 
 		return
 	}
 
-	messages, err := h.MessageService.GetAllPrivateMessagesFromUser(ctx, id, fromID, paginationOpts)
+	messages, err := h.MessageService.GetAllPrivateMessagesFromUser(ctx, id, fromID, paginationOpts.Offset, paginationOpts.Limit)
 	if err != nil {
 		msg := fmt.Sprintf("error occurred getting private messages from user: %v", err)
 

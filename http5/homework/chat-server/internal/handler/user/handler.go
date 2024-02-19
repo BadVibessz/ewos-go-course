@@ -4,6 +4,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -15,7 +16,6 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/mapper"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 
 	handlerinternalutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/handler"
 	handlerutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/handler"
@@ -23,21 +23,22 @@ import (
 )
 
 type UserService interface {
-	RegisterUser(ctx context.Context, user entity.User) (*model.User, error)
-	GetUserByID(ctx context.Context, id int) (*model.User, error)
-	GetUserByEmail(ctx context.Context, email string) (*model.User, error)
-	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
-	GetAllUsers(ctx context.Context, paginationOpts request.PaginationOptions) []*model.User
-	UpdateUser(ctx context.Context, id int, updateModel entity.User) (*model.User, error)
-	DeleteUser(ctx context.Context, id int) (*model.User, error)
+	RegisterUser(ctx context.Context, user entity.User) (*entity.User, error)
+	GetUserByID(ctx context.Context, id int) (*entity.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
+	GetAllUsers(ctx context.Context, offset, limit int) []*entity.User
+	UpdateUser(ctx context.Context, id int, updateModel entity.User) (*entity.User, error)
+	DeleteUser(ctx context.Context, id int) (*entity.User, error)
 }
 
 type MessageService interface {
-	GetAllPrivateMessages(ctx context.Context, toID int, paginateOpts request.PaginationOptions) []*model.PrivateMessage
+	GetAllPrivateMessages(ctx context.Context, toID int, offset, limit int) []*entity.PrivateMessage
+	GetAllUsersThatSentMessage(ctx context.Context, toID int, offset, limit int) []*entity.User
 }
 
 type AuthService interface {
-	Login(ctx context.Context, loginReq request.LoginRequest) (*model.User, error)
+	Login(ctx context.Context, loginReq request.LoginRequest) (*entity.User, error)
 }
 
 type Handler struct {
@@ -45,14 +46,17 @@ type Handler struct {
 	MessageService MessageService
 	AuthService    AuthService
 	logger         *logrus.Logger
+	valid          *validator.Validate
 }
 
-func New(userService UserService, messageService MessageService, authService AuthService, logger *logrus.Logger) *Handler {
+func New(userService UserService, messageService MessageService, authService AuthService,
+	logger *logrus.Logger, valid *validator.Validate) *Handler {
 	return &Handler{
 		UserService:    userService,
 		MessageService: messageService,
 		AuthService:    authService,
 		logger:         logger,
+		valid:          valid,
 	}
 }
 
@@ -64,7 +68,7 @@ func (h *Handler) Routes() *chi.Mux {
 	})
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger))
+		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.valid))
 		r.Get("/all", h.GetAll)
 		r.Get("/messages", h.GetAllUsersThatSentMessage)
 	})
@@ -96,7 +100,7 @@ func (h *Handler) Register(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := registerReq.Validate(); err != nil {
+	if err := registerReq.Validate(h.valid); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating RegisterRequest struct: %v", err)
 		respMsg := fmt.Sprintf("invalid registration data provided: %v", err)
 
@@ -131,13 +135,13 @@ func (h *Handler) Register(rw http.ResponseWriter, req *http.Request) {
 func (h *Handler) GetAll(rw http.ResponseWriter, req *http.Request) {
 	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, handler.DefaultOffset, handler.DefaultLimit)
 
-	if err := paginationOpts.Validate(); err != nil {
+	if err := paginationOpts.Validate(h.valid); err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, "", err.Error())
 
 		return
 	}
 
-	users := h.UserService.GetAllUsers(req.Context(), paginationOpts)
+	users := h.UserService.GetAllUsers(req.Context(), paginationOpts.Offset, paginationOpts.Limit)
 
 	render.JSON(rw, req, sliceutils.Map(users, mapper.MapUserToUserResponse))
 	rw.WriteHeader(http.StatusOK)
@@ -162,10 +166,7 @@ func (h *Handler) GetAllUsersThatSentMessage(rw http.ResponseWriter, req *http.R
 
 	paginateOpts := request.GetUnlimitedPaginationOptions()
 
-	messages := h.MessageService.GetAllPrivateMessages(req.Context(), id, paginateOpts)
-
-	usersDuplicates := sliceutils.Map(messages, func(msg *model.PrivateMessage) *model.User { return msg.From })
-	users := sliceutils.Unique(usersDuplicates)
+	users := h.MessageService.GetAllUsersThatSentMessage(req.Context(), id, paginateOpts.Offset, paginateOpts.Limit)
 
 	render.JSON(rw, req, sliceutils.Map(users, mapper.MapUserToUserResponse))
 	rw.WriteHeader(http.StatusOK)

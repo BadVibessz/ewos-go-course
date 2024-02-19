@@ -7,6 +7,6 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required,min=1"`
 }
 
-func (lr *LoginRequest) Validate() error {
-	return validator.New(validator.WithRequiredStructEnabled()).Struct(lr)
+func (lr *LoginRequest) Validate(valid *validator.Validate) error {
+	return valid.Struct(lr)
 }

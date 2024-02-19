@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
@@ -17,7 +17,7 @@ func initRepo(ctx context.Context) *UserRepoInMemDB {
 	return NewInMemUserRepo(db)
 }
 
-func isEqualCreateModelToUser(createModel *model.User, user *model.User) bool {
+func isEqualCreateModelToUser(createModel *entity.User, user *entity.User) bool {
 	return createModel.Email == user.Email &&
 		createModel.Username == user.Username &&
 		createModel.HashedPassword == user.HashedPassword
@@ -27,7 +27,7 @@ func TestUserCreatedPositive(t *testing.T) {
 	ctx := context.Background()
 	repo := initRepo(ctx)
 
-	toCreate := model.User{
+	toCreate := entity.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",
@@ -52,13 +52,13 @@ func TestGetAllUsersPositive(t *testing.T) {
 	ctx := context.Background()
 	repo := initRepo(ctx)
 
-	toCreate1 := model.User{
+	toCreate1 := entity.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",
 	}
 
-	toCreate2 := model.User{
+	toCreate2 := entity.User{
 		Email:          "test@mail.com2",
 		Username:       "test2",
 		HashedPassword: "NoHash2",
@@ -98,7 +98,7 @@ func TestGetUserByIdPositive(t *testing.T) {
 	ctx := context.Background()
 	repo := initRepo(ctx)
 
-	toCreate := model.User{
+	toCreate := entity.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",
@@ -128,7 +128,7 @@ func TestGetUserByEmailPositive(t *testing.T) {
 	ctx := context.Background()
 	repo := initRepo(ctx)
 
-	toCreate := model.User{
+	toCreate := entity.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",
@@ -158,7 +158,7 @@ func TestGetUserByUsernamePositive(t *testing.T) {
 	ctx := context.Background()
 	repo := initRepo(ctx)
 
-	toCreate := model.User{
+	toCreate := entity.User{
 		Email:          "test@mail.com",
 		Username:       "test",
 		HashedPassword: "NoHash",

@@ -4,10 +4,9 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/response"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 )
 
-func MapUserToUserResponse(user *model.User) response.GetUserResponse {
+func MapUserToUserResponse(user *entity.User) response.GetUserResponse {
 	return response.GetUserResponse{
 		ID:        user.ID,
 		Username:  user.Username,

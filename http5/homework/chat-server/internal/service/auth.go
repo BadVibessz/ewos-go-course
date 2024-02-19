@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 
 	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
 )
@@ -21,7 +21,7 @@ func NewBasicAuthService(ur userservice.UserRepo) *AuthBasicService {
 	}
 }
 
-func (as *AuthBasicService) Login(ctx context.Context, loginReq request.LoginRequest) (*model.User, error) {
+func (as *AuthBasicService) Login(ctx context.Context, loginReq request.LoginRequest) (*entity.User, error) {
 	user, err := as.UserRepo.GetUserByUsername(ctx, loginReq.Username)
 	if err != nil {
 		return nil, err

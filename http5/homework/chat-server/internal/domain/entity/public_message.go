@@ -1,6 +1,11 @@
 package entity
 
+import "time"
+
 type PublicMessage struct {
-	FromID  int
-	Content string
+	ID       int
+	From     *User
+	Content  string
+	SentAt   time.Time
+	EditedAt time.Time
 }

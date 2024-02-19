@@ -9,6 +9,6 @@ type RegisterRequest struct {
 	ConfirmPassword string `json:"confirm_password" validate:"required,eqfield=Password"`
 }
 
-func (rr *RegisterRequest) Validate() error {
-	return validator.New(validator.WithRequiredStructEnabled()).Struct(rr)
+func (rr *RegisterRequest) Validate(valid *validator.Validate) error {
+	return valid.Struct(rr)
 }

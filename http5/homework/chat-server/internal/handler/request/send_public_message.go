@@ -7,6 +7,6 @@ type SendPublicMessageRequest struct {
 	Content string `json:"content" validate:"required,min=1,max=2000"`
 }
 
-func (sm *SendPublicMessageRequest) Validate() error {
-	return validator.New(validator.WithRequiredStructEnabled()).Struct(sm)
+func (sm *SendPublicMessageRequest) Validate(valid *validator.Validate) error {
+	return valid.Struct(sm)
 }

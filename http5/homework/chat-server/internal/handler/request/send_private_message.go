@@ -8,6 +8,6 @@ type SendPrivateMessageRequest struct {
 	Content string `json:"content" validate:"required,min=1,max=2000"`
 }
 
-func (sm *SendPrivateMessageRequest) Validate() error {
-	return validator.New(validator.WithRequiredStructEnabled()).Struct(sm)
+func (sm *SendPrivateMessageRequest) Validate(valid *validator.Validate) error {
+	return valid.Struct(sm)
 }

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 )
@@ -15,8 +15,6 @@ import (
 type PrivateMessageInMemRepo struct {
 	DB inmemory.InMemoryDB
 }
-
-// TODO: LINTER DUPL
 
 func NewInMemPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageInMemRepo {
 	repo := PrivateMessageInMemRepo{DB: db}
@@ -29,7 +27,7 @@ func NewInMemPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageInMemRepo
 	return &repo
 }
 
-func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg model.PrivateMessage) (*model.PrivateMessage, error) {
+func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg entity.PrivateMessage) (*entity.PrivateMessage, error) {
 	idOffset, err := pr.DB.GetRowsCount(PrivateMessageTableName)
 	if err != nil {
 		return nil, err
@@ -49,16 +47,16 @@ func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg mode
 	return &msg, nil
 }
 
-func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(_ context.Context, offset, limit int) []*model.PrivateMessage {
+func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(_ context.Context, offset, limit int) []*entity.PrivateMessage {
 	rows, err := pr.DB.GetAllRows(PrivateMessageTableName, offset, limit)
 	if err != nil {
 		return nil
 	}
 
-	res := make([]*model.PrivateMessage, 0, len(rows))
+	res := make([]*entity.PrivateMessage, 0, len(rows))
 
 	for _, row := range rows {
-		msg, ok := row.(model.PrivateMessage)
+		msg, ok := row.(entity.PrivateMessage)
 		if ok {
 			res = append(res, &msg)
 		}
@@ -69,13 +67,13 @@ func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(_ context.Context, offs
 	return res
 }
 
-func (pr *PrivateMessageInMemRepo) GetPrivateMessage(_ context.Context, id int) (*model.PrivateMessage, error) {
+func (pr *PrivateMessageInMemRepo) GetPrivateMessage(_ context.Context, id int) (*entity.PrivateMessage, error) {
 	row, err := pr.DB.GetRow(PrivateMessageTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, ErrNoSuchPrivateMessage
 	}
 
-	msg, ok := row.(model.PrivateMessage)
+	msg, ok := row.(entity.PrivateMessage)
 	if !ok {
 		return nil, ErrNoSuchPrivateMessage
 	}

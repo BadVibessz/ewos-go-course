@@ -2,10 +2,10 @@
 package fixtures
 
 import (
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"strconv"
 	"time"
 
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/model"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
@@ -14,7 +14,7 @@ import (
 func LoadFixtures(db inmemory.InMemoryDB) {
 	now := time.Now()
 
-	users := []model.User{
+	users := []entity.User{
 		{
 			ID:             1,
 			Username:       "test",
@@ -48,7 +48,7 @@ func LoadFixtures(db inmemory.InMemoryDB) {
 		}
 	}
 
-	pubMessages := []model.PublicMessage{
+	pubMessages := []entity.PublicMessage{
 		{
 			ID:       1,
 			From:     &users[0],
@@ -79,7 +79,7 @@ func LoadFixtures(db inmemory.InMemoryDB) {
 		}
 	}
 
-	privMessages := []model.PrivateMessage{
+	privMessages := []entity.PrivateMessage{
 		{
 			ID:       1,
 			From:     &users[0],

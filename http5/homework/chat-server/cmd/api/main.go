@@ -4,11 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	privatemessagehandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/message/private"
-	publicmessagehandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/message/public"
-	userhandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/user"
-
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/fixtures"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,11 +11,17 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
 
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/fixtures"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/router"
+
+	privatemessagehandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/message/private"
+	publicmessagehandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/message/public"
+	userhandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/user"
 
 	messageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
 	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
@@ -46,7 +47,7 @@ const ( // todo: config file
 	loadFixtures = true
 )
 
-func initDB(ctx context.Context, loadFixtures bool) (*inmemory.InMemDB, <-chan any) {
+func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	var inMemDB *inmemory.InMemDB
 
 	var savedChan <-chan any
@@ -65,10 +66,6 @@ func initDB(ctx context.Context, loadFixtures bool) (*inmemory.InMemDB, <-chan a
 
 	if !dbStateRestored {
 		inMemDB, savedChan = inmemory.NewInMemDB(ctx, dbSavePath)
-	}
-
-	if loadFixtures {
-		fixtures.LoadFixtures(inMemDB)
 	}
 
 	return inMemDB, savedChan
@@ -91,12 +88,18 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	inMemDB, savedChan := initDB(ctx, loadFixtures)
+	inMemDB, savedChan := initDB(ctx)
+	if loadFixtures {
+		fixtures.LoadFixtures(inMemDB)
+	}
+
 	userService, messageService, authService := initInMemServices(inMemDB)
 
-	userHandler := userhandler.New(userService, messageService, authService, logger)
-	publicMessageHandler := publicmessagehandler.New(messageService, userService, authService, logger)
-	privateMessageHandler := privatemessagehandler.New(messageService, userService, authService, logger)
+	valid := validator.New(validator.WithRequiredStructEnabled())
+
+	userHandler := userhandler.New(userService, messageService, authService, logger, valid)
+	publicMessageHandler := publicmessagehandler.New(messageService, userService, authService, logger, valid)
+	privateMessageHandler := privatemessagehandler.New(messageService, userService, authService, logger, valid)
 
 	routers := make(map[string]chi.Router)
 

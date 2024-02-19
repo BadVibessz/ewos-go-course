@@ -1,17 +1,18 @@
 package request
 
 import (
-	"github.com/go-playground/validator/v10"
 	"math"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type PaginationOptions struct {
-	Offset int `json:"offset" validate:"required,min=0"`
+	Offset int `json:"offset" validate:"min=0"`
 	Limit  int `json:"limit" validate:"required,min=0"`
 }
 
-func (po *PaginationOptions) Validate() error {
-	return validator.New(validator.WithRequiredStructEnabled()).Struct(po) // TODO:
+func (po *PaginationOptions) Validate(valid *validator.Validate) error {
+	return valid.Struct(po)
 }
 
 func GetUnlimitedPaginationOptions() PaginationOptions {
