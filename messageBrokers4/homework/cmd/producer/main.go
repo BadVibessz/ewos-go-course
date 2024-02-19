@@ -6,7 +6,7 @@ import (
 	priceproducer "messageBrokers4/internal/infrastructure/producer"
 )
 
-var brokers = []string{":29092", ":29093"}
+var brokers = []string{":9093"}
 
 func main() {
 	logger := log.New()
