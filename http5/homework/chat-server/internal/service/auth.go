@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 
 	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
