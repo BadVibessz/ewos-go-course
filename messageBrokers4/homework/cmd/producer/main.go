@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	log "github.com/sirupsen/logrus"
-	priceproducer "messageBrokers4/internal/infrastructure/producer"
+	"messageBrokers4/internal/infrastructure/producer"
 )
 
 var brokers = []string{":9093"}
@@ -11,12 +11,18 @@ var brokers = []string{":9093"}
 func main() {
 	logger := log.New()
 
-	producer, err := priceproducer.NewPricesProducer(brokers, logger)
+	prod, err := producer.NewPricesProducer(brokers, logger)
 	if err != nil {
-		logger.Fatalf("producer not started: %v", err)
+		logger.Fatalf("prod not started: %v", err)
 	}
 
 	ctx := context.Background() // todo: graceful shutdown
 
-	producer.ProducePrices(ctx, "prices")
+	prod.ProducePrices(ctx, "prices")
+
+	defer func() {
+		if err = prod.Close(); err != nil {
+			log.Fatalf("failed to close producer")
+		}
+	}()
 }
