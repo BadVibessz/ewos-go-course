@@ -38,7 +38,8 @@ func (p *Prices) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.
 				return nil
 			}
 
-			p.logger.Infof("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp.Format(time.ANSIC), message.Topic)
+			p.logger.Infof("Message claimed: value = %s, timestamp = %v, topic = %s partition: %v",
+				string(message.Value), message.Timestamp.Format(time.ANSIC), message.Topic, message.Partition)
 
 			session.MarkMessage(message, "")
 
