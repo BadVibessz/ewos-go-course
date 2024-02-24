@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"messageBrokers4/internal/infrastructure/consumer"
 	"messageBrokers4/internal/infrastructure/producer"
+	"sync"
 )
 
 var (
@@ -15,25 +16,15 @@ var (
 
 const consumerGroupName = "my_group"
 
-func initPriceProducer(logger *log.Logger) *producer.Prices {
-	prod, err := producer.NewPricesProducer(brokers, logger)
-	if err != nil {
-		logger.Fatalf("prod not started: %v", err)
-	}
-
-	return prod
-}
-
-func initPriceConsumer() {
-
-}
-
 func main() {
 	logger := log.New()
 	ctx := context.Background() // todo: graceful shutdown
 
 	// price producer
-	prod := initPriceProducer(logger)
+	prod, err := producer.NewPricesProducer(brokers, logger)
+	if err != nil {
+		logger.Fatalf("prod not started: %v", err)
+	}
 
 	defer func() {
 		if err := prod.Close(); err != nil {
@@ -41,7 +32,13 @@ func main() {
 		}
 	}()
 
-	prod.ProducePrices(ctx, "prices")
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		prod.ProducePrices(ctx, "prices")
+	}()
 
 	// price consumer
 	conf := sarama.NewConfig()
@@ -60,16 +57,24 @@ func main() {
 
 	// iterate over consumer sessions.
 	logger.Infof("price consumer started")
-	for {
-		handler := consumer.NewPricesConsumer(logger)
 
-		// `Consume` should be called inside an infinite loop, when a
-		// server-side rebalance happens, the consumer session will need to be
-		// recreated to get the new claims
-		err = consGroup.Consume(ctx, topics, handler)
-		if err != nil {
-			panic(err)
+	wg.Add(1)
+
+	go func() {
+		wg.Done()
+
+		for {
+			handler := consumer.NewPricesConsumer(logger)
+
+			// `Consume` should be called inside an infinite loop, when a
+			// server-side rebalance happens, the consumer session will need to be
+			// recreated to get the new claims
+			err = consGroup.Consume(ctx, topics, handler)
+			if err != nil {
+				panic(err)
+			}
 		}
-	}
+	}()
 
+	wg.Wait()
 }
