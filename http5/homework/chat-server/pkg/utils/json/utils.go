@@ -8,8 +8,7 @@ import (
 func PrettifyJSON(in string) string {
 	var out bytes.Buffer
 
-	err := json.Indent(&out, []byte(in), "", "\t")
-	if err != nil {
+	if err := json.Indent(&out, []byte(in), "", "\t"); err != nil {
 		return in
 	}
 
