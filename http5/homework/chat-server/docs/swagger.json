@@ -45,7 +45,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PrivateMessageResponse"
+                                "$ref": "#/definitions/response.GetPrivateMessageResponse"
                             }
                         }
                     },
@@ -91,7 +91,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PrivateMessageResponse"
+                                "$ref": "#/definitions/response.GetPrivateMessageResponse"
                             }
                         }
                     },
@@ -160,7 +160,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PrivateMessageResponse"
+                                "$ref": "#/definitions/response.GetPrivateMessageResponse"
                             }
                         }
                     },
@@ -210,7 +210,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PublicMessageResponse"
+                                "$ref": "#/definitions/response.GetPublicMessageResponse"
                             }
                         }
                     },
@@ -256,7 +256,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PublicMessageResponse"
+                                "$ref": "#/definitions/response.GetPublicMessageResponse"
                             }
                         }
                     },
@@ -296,12 +296,58 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.UserResponse"
+                                "$ref": "#/definitions/response.GetUserResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/login": {
+            "post": {
+                "description": "login user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "login info",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -330,7 +376,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.UserResponse"
+                                "$ref": "#/definitions/response.GetUserResponse"
                             }
                         }
                     },
@@ -371,7 +417,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.UserResponse"
+                            "$ref": "#/definitions/response.GetUserResponse"
                         }
                     },
                     "400": {
@@ -391,6 +437,23 @@
         }
     },
     "definitions": {
+        "request.LoginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "username": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
         "request.RegisterRequest": {
             "type": "object",
             "required": [
@@ -457,7 +520,7 @@
                 }
             }
         },
-        "response.PrivateMessageResponse": {
+        "response.GetPrivateMessageResponse": {
             "type": "object",
             "properties": {
                 "content": {
@@ -477,7 +540,7 @@
                 }
             }
         },
-        "response.PublicMessageResponse": {
+        "response.GetPublicMessageResponse": {
             "type": "object",
             "properties": {
                 "content": {
@@ -494,7 +557,7 @@
                 }
             }
         },
-        "response.UserResponse": {
+        "response.GetUserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -510,6 +573,14 @@
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
                     "type": "string"
                 }
             }

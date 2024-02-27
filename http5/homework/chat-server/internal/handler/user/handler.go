@@ -4,6 +4,7 @@ package user
 import (
 	"context"
 	"fmt"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/response"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -71,6 +72,7 @@ func (h *Handler) Routes() *chi.Mux {
 
 	router.Group(func(r chi.Router) {
 		r.Post("/register", h.Register)
+		r.Post("/login", h.Login)
 	})
 
 	router.Group(func(r chi.Router) {
@@ -90,7 +92,7 @@ func (h *Handler) Routes() *chi.Mux {
 //	@Accept			json
 //	@Produce		plain
 //	@Param			input	body		request.RegisterRequest	true	"registration info"
-//	@Success		200		{object}	response.UserResponse
+//	@Success		200		{object}	response.GetUserResponse
 //	@Failure		400		{string}	invalid		registration	data	provided
 //	@Failure		500		{string}	internal	error
 //	@Router			/api/v1/users/register [post]
@@ -148,7 +150,6 @@ func (h *Handler) Login(rw http.ResponseWriter, req *http.Request) {
 		respMsg := fmt.Sprintf("invalid login data provided: %v", err)
 
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, logMsg, respMsg)
-
 		return
 	}
 
@@ -157,7 +158,6 @@ func (h *Handler) Login(rw http.ResponseWriter, req *http.Request) {
 		respMsg := fmt.Sprintf("invalid login data provided: %v", err)
 
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, logMsg, respMsg)
-
 		return
 	}
 
@@ -169,17 +169,28 @@ func (h *Handler) Login(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// todo: construct jwt token
+	// construct jwt token
+	payload := map[string]any{
+		"id":       user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+	}
 
-	payload := map[string]any{"id": "2"}
-
-	token, err := jwtutils.CreateJWT(payload, jwt.SigningMethodHS256, "")
+	token, err := jwtutils.CreateJWT(payload, jwt.SigningMethodHS256, "secret") // todo: store secret in .env
 	if err != nil {
+		msg := fmt.Sprintf("error occurred signing jwt token: %v", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusInternalServerError, msg, msg)
 		return
 	}
 
-	render.JSON(rw, req, mapper.MapUserToUserResponse(user))
-	rw.WriteHeader(http.StatusCreated)
+	// todo: mapper?
+	resp := response.LoginResponse{
+		Token: token,
+	}
+
+	render.JSON(rw, req, resp)
+	rw.WriteHeader(http.StatusOK)
 }
 
 // GetAll godoc
@@ -189,7 +200,7 @@ func (h *Handler) Login(rw http.ResponseWriter, req *http.Request) {
 //	@Security		BasicAuth
 //	@Tags			User
 //	@Produce		json
-//	@Success		200	{object}	[]response.UserResponse
+//	@Success		200	{object}	[]response.GetUserResponse
 //	@Failure		401	{string}	Unauthorized
 //	@Router			/api/v1/users/all [get]
 func (h *Handler) GetAll(rw http.ResponseWriter, req *http.Request) {
@@ -214,7 +225,7 @@ func (h *Handler) GetAll(rw http.ResponseWriter, req *http.Request) {
 //	@Security		BasicAuth
 //	@Tags			User
 //	@Produce		json
-//	@Success		200	{object}	[]response.UserResponse
+//	@Success		200	{object}	[]response.GetUserResponse
 //	@Failure		401	{string}	Unauthorized
 //	@Router			/api/v1/users/messages [get]
 func (h *Handler) GetAllUsersThatSentMessage(rw http.ResponseWriter, req *http.Request) {

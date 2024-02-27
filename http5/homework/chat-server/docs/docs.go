@@ -52,7 +52,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PrivateMessageResponse"
+                                "$ref": "#/definitions/response.GetPrivateMessageResponse"
                             }
                         }
                     },
@@ -98,7 +98,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PrivateMessageResponse"
+                                "$ref": "#/definitions/response.GetPrivateMessageResponse"
                             }
                         }
                     },
@@ -167,7 +167,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PrivateMessageResponse"
+                                "$ref": "#/definitions/response.GetPrivateMessageResponse"
                             }
                         }
                     },
@@ -217,7 +217,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PublicMessageResponse"
+                                "$ref": "#/definitions/response.GetPublicMessageResponse"
                             }
                         }
                     },
@@ -263,7 +263,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.PublicMessageResponse"
+                                "$ref": "#/definitions/response.GetPublicMessageResponse"
                             }
                         }
                     },
@@ -303,12 +303,58 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.UserResponse"
+                                "$ref": "#/definitions/response.GetUserResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/login": {
+            "post": {
+                "description": "login user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "User"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "login info",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -337,7 +383,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.UserResponse"
+                                "$ref": "#/definitions/response.GetUserResponse"
                             }
                         }
                     },
@@ -378,7 +424,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.UserResponse"
+                            "$ref": "#/definitions/response.GetUserResponse"
                         }
                     },
                     "400": {
@@ -398,6 +444,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "request.LoginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "username": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            }
+        },
         "request.RegisterRequest": {
             "type": "object",
             "required": [
@@ -464,7 +527,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.PrivateMessageResponse": {
+        "response.GetPrivateMessageResponse": {
             "type": "object",
             "properties": {
                 "content": {
@@ -484,7 +547,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.PublicMessageResponse": {
+        "response.GetPublicMessageResponse": {
             "type": "object",
             "properties": {
                 "content": {
@@ -501,7 +564,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.UserResponse": {
+        "response.GetUserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -517,6 +580,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
                     "type": "string"
                 }
             }

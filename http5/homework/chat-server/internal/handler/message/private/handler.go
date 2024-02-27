@@ -109,7 +109,7 @@ func switchByErrorAndWriteResponse(err error, rw http.ResponseWriter, logger *lo
 //	@Accept			json
 //	@Produce		json
 //	@Param			input	body		request.SendPrivateMessageRequest	true	"private message schema"
-//	@Success		200		{object}	[]response.PrivateMessageResponse
+//	@Success		200		{object}	[]response.GetPrivateMessageResponse
 //	@Failure		401		{string}	Unauthorized
 //	@Failure		400		{string}	invalid		message	provided
 //	@Failure		500		{string}	internal	error
@@ -162,7 +162,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 //	@Produce		json
 //	@Param			offset	query		int	true	"Offset"
 //	@Param			limit	query		int	true	"Limit"
-//	@Success		200		{object}	[]response.PrivateMessageResponse
+//	@Success		200		{object}	[]response.GetPrivateMessageResponse
 //	@Failure		401		{string}	Unauthorized
 //	@Router			/api/v1/messages/private [get]
 func (h *Handler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Request) {
@@ -197,7 +197,7 @@ func (h *Handler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Reques
 //	@Param			limit	query	int	true	"Limit"
 //	@Param			user_id	path	int	true	"User FromID"
 //	@Para			page query int true "page"
-//	@Success		200	{object}	[]response.PrivateMessageResponse
+//	@Success		200	{object}	[]response.GetPrivateMessageResponse
 //	@Failure		401	{string}	Unauthorized
 //	@Router			/api/v1/messages/private/user/{user_id} [get]
 func (h *Handler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, req *http.Request) {

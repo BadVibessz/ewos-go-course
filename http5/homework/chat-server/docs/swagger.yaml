@@ -1,5 +1,17 @@
 basePath: /chat
 definitions:
+  request.LoginRequest:
+    properties:
+      password:
+        minLength: 1
+        type: string
+      username:
+        minLength: 1
+        type: string
+    required:
+    - password
+    - username
+    type: object
   request.RegisterRequest:
     properties:
       confirm_password:
@@ -48,7 +60,7 @@ definitions:
     - content
     - from_id
     type: object
-  response.PrivateMessageResponse:
+  response.GetPrivateMessageResponse:
     properties:
       content:
         type: string
@@ -61,7 +73,7 @@ definitions:
       to_username:
         type: string
     type: object
-  response.PublicMessageResponse:
+  response.GetPublicMessageResponse:
     properties:
       content:
         type: string
@@ -72,7 +84,7 @@ definitions:
       sent_at:
         type: string
     type: object
-  response.UserResponse:
+  response.GetUserResponse:
     properties:
       created_at:
         type: string
@@ -83,6 +95,11 @@ definitions:
       updated_at:
         type: string
       username:
+        type: string
+    type: object
+  response.LoginResponse:
+    properties:
+      token:
         type: string
     type: object
 info:
@@ -112,7 +129,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/response.PrivateMessageResponse'
+              $ref: '#/definitions/response.GetPrivateMessageResponse'
             type: array
         "401":
           description: Unauthorized
@@ -141,7 +158,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/response.PrivateMessageResponse'
+              $ref: '#/definitions/response.GetPrivateMessageResponse'
             type: array
         "400":
           description: Bad Request
@@ -186,7 +203,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/response.PrivateMessageResponse'
+              $ref: '#/definitions/response.GetPrivateMessageResponse'
             type: array
         "401":
           description: Unauthorized
@@ -218,7 +235,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/response.PublicMessageResponse'
+              $ref: '#/definitions/response.GetPublicMessageResponse'
             type: array
         "401":
           description: Unauthorized
@@ -247,7 +264,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/response.PublicMessageResponse'
+              $ref: '#/definitions/response.GetPublicMessageResponse'
             type: array
         "401":
           description: Unauthorized
@@ -272,7 +289,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/response.UserResponse'
+              $ref: '#/definitions/response.GetUserResponse'
             type: array
         "401":
           description: Unauthorized
@@ -281,6 +298,36 @@ paths:
       security:
       - BasicAuth: []
       summary: Get all users
+      tags:
+      - User
+  /api/v1/users/login:
+    post:
+      consumes:
+      - application/json
+      description: login user
+      parameters:
+      - description: login info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.LoginRequest'
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Login user
       tags:
       - User
   /api/v1/users/messages:
@@ -293,7 +340,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/response.UserResponse'
+              $ref: '#/definitions/response.GetUserResponse'
             type: array
         "401":
           description: Unauthorized
@@ -322,7 +369,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.UserResponse'
+            $ref: '#/definitions/response.GetUserResponse'
         "400":
           description: Bad Request
           schema:

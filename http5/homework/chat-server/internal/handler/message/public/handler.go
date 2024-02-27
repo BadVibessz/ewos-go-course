@@ -88,7 +88,7 @@ func (h *Handler) Routes() *chi.Mux {
 //	@Produce		json
 //	@Param			offset	query		int	true	"Offset"
 //	@Param			limit	query		int	true	"Limit"
-//	@Success		200		{object}	[]response.PublicMessageResponse
+//	@Success		200		{object}	[]response.GetPublicMessageResponse
 //	@Failure		401		{string}	Unauthorized
 //	@Router			/api/v1/messages/public [get]
 func (h *Handler) GetAllPublicMessages(rw http.ResponseWriter, req *http.Request) {
@@ -115,7 +115,7 @@ func (h *Handler) GetAllPublicMessages(rw http.ResponseWriter, req *http.Request
 //	@Accept			json
 //	@Produce		json
 //	@Param			input	body		request.SendPublicMessageRequest	true	"public message schema"
-//	@Success		200		{object}	[]response.PublicMessageResponse
+//	@Success		200		{object}	[]response.GetPublicMessageResponse
 //	@Failure		401		{string}	Unauthorized
 //	@Failure		500		{string}	internal	error
 //	@Router			/api/v1/messages/public [post]
