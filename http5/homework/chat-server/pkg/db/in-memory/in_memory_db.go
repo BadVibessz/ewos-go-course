@@ -7,10 +7,8 @@ import (
 	"sync"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
-)
 
-const (
-	writePerm = 0o664
+	jsonutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/json"
 )
 
 type InMemoryDB interface {
@@ -25,6 +23,7 @@ type InMemoryDB interface {
 	GetAllRows(table string, offset, limit int) ([]any, error)
 
 	GetRowsCount(table string) (int, error)
+	GetTableCounter(table string) (int, error)
 
 	Clear()
 }
@@ -32,14 +31,17 @@ type InMemoryDB interface {
 type Table = *orderedmap.OrderedMap[string, any]
 
 type InMemDB struct {
-	Tables map[string]Table
-	m      *sync.RWMutex
+	Tables   map[string]Table
+	counters map[string]int
+
+	m *sync.RWMutex
 }
 
 func NewInMemDB(ctx context.Context, savePath string) (*InMemDB, <-chan any) {
 	db := InMemDB{
-		Tables: make(map[string]Table),
-		m:      &sync.RWMutex{},
+		Tables:   make(map[string]Table),
+		counters: make(map[string]int),
+		m:        &sync.RWMutex{},
 	}
 
 	savedChan := make(chan any, 1)
@@ -60,9 +62,16 @@ func NewInMemDBFromJSON(ctx context.Context, jsonState string, savePath string) 
 		return nil, nil, err
 	}
 
+	counters := make(map[string]int)
+
+	for name, table := range tables {
+		counters[name] = table.Len()
+	}
+
 	db := InMemDB{
-		Tables: tables,
-		m:      &sync.RWMutex{},
+		Tables:   tables,
+		counters: counters,
+		m:        &sync.RWMutex{},
 	}
 
 	savedChan := make(chan any)
@@ -82,7 +91,7 @@ func (db *InMemDB) Save(path string, doneChan chan any) {
 		return // todo: log?
 	}
 
-	err = os.WriteFile(path, bytes, writePerm)
+	err = os.WriteFile(path, []byte(jsonutils.PrettifyJSON(string(bytes))), writePerm)
 	if err != nil {
 		doneChan <- err
 		return
@@ -96,6 +105,7 @@ func (db *InMemDB) CreateTable(name string) {
 	defer db.m.Unlock()
 
 	db.Tables[name] = orderedmap.New[string, any]()
+	db.counters[name] = 0
 }
 
 func (db *InMemDB) getTableNotLocking(name string) (Table, error) {
@@ -143,6 +153,7 @@ func (db *InMemDB) AddRow(table string, identifier string, row any) error {
 	}
 
 	t.Set(identifier, row)
+	db.counters[table]++
 
 	return nil
 }
@@ -164,6 +175,15 @@ func (db *InMemDB) AlterRow(table string, identifier string, newRow any) error {
 	t.Set(identifier, newRow) // todo: test if it's replaces existing value
 
 	return nil
+}
+
+func (db *InMemDB) GetTableCounter(table string) (int, error) {
+	counter, exists := db.counters[table]
+	if !exists {
+		return -1, ErrNotExistedTable
+	}
+
+	return counter, nil
 }
 
 func (db *InMemDB) GetRow(table string, identifier string) (any, error) {

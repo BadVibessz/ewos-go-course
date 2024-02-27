@@ -15,16 +15,14 @@ import (
 )
 
 type PrivateMessageInMemRepo struct {
-	DB      inmemory.InMemoryDB
-	counter int
-	mutex   sync.RWMutex
+	DB    inmemory.InMemoryDB
+	mutex sync.RWMutex
 }
 
 func NewInMemPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageInMemRepo {
 	repo := PrivateMessageInMemRepo{
-		DB:      db,
-		counter: 1,
-		mutex:   sync.RWMutex{},
+		DB:    db,
+		mutex: sync.RWMutex{},
 	}
 
 	_, err := repo.DB.GetTable(PrivateMessageTableName)
@@ -39,16 +37,18 @@ func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg enti
 	pr.mutex.Lock()
 	defer pr.mutex.Unlock()
 
+	idOffset, err := pr.DB.GetTableCounter(PrivateMessageTableName)
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 
-	msg.ID = pr.counter
+	msg.ID = idOffset + 1
 	msg.SentAt = now
 	msg.EditedAt = now
 
-	pr.counter++
-
-	err := pr.DB.AddRow(PrivateMessageTableName, strconv.Itoa(msg.ID), msg)
-	if err != nil {
+	if err = pr.DB.AddRow(PrivateMessageTableName, strconv.Itoa(msg.ID), msg); err != nil {
 		return nil, err
 	}
 

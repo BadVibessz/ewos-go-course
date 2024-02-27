@@ -2,10 +2,10 @@
 package fixtures
 
 import (
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"strconv"
 	"time"
 
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
@@ -41,6 +41,8 @@ func LoadFixtures(db inmemory.InMemoryDB) {
 		},
 	}
 
+	db.CreateTable(repository.UserTableName)
+
 	for _, user := range users {
 		err := db.AddRow(repository.UserTableName, strconv.Itoa(user.ID), user)
 		if err != nil {
@@ -71,6 +73,8 @@ func LoadFixtures(db inmemory.InMemoryDB) {
 			EditedAt: now,
 		},
 	}
+
+	db.CreateTable(repository.PublicMessageTableName)
 
 	for _, pubMsg := range pubMessages {
 		err := db.AddRow(repository.PublicMessageTableName, strconv.Itoa(pubMsg.ID), pubMsg)
@@ -113,6 +117,8 @@ func LoadFixtures(db inmemory.InMemoryDB) {
 			EditedAt: now,
 		},
 	}
+
+	db.CreateTable(repository.PrivateMessageTableName)
 
 	for _, privMsg := range privMessages {
 		err := db.AddRow(repository.PrivateMessageTableName, strconv.Itoa(privMsg.ID), privMsg)
