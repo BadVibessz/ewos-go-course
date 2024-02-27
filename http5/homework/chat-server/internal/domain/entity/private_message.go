@@ -1,6 +1,12 @@
 package entity
 
+import "time"
+
 type PrivateMessage struct {
-	PublicMessage
-	To *User
+	ID       int
+	From     *User
+	To       *User
+	Content  string
+	SentAt   time.Time
+	EditedAt time.Time
 }
