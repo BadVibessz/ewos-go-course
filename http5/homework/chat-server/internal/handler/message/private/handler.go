@@ -75,7 +75,7 @@ func (h *Handler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.validator))
+		r.Use(middleware.BasicAuthMiddleware(h.AuthService, h.logger, h.validator))
 
 		r.Get("/", h.GetAllPrivateMessages)
 		r.Post("/", h.SendPrivateMessage)

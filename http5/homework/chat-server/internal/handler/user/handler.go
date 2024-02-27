@@ -4,11 +4,12 @@ package user
 import (
 	"context"
 	"fmt"
-	"github.com/go-playground/validator/v10"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/go-playground/validator/v10"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/sirupsen/logrus"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
@@ -19,6 +20,7 @@ import (
 
 	handlerinternalutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/handler"
 	handlerutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/handler"
+	jwtutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/jwt"
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
@@ -72,7 +74,7 @@ func (h *Handler) Routes() *chi.Mux {
 	})
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.validator))
+		r.Use(middleware.BasicAuthMiddleware(h.AuthService, h.logger, h.validator))
 		r.Get("/all", h.GetAll)
 		r.Get("/messages", h.GetAllUsersThatSentMessage)
 	})
@@ -119,6 +121,60 @@ func (h *Handler) Register(rw http.ResponseWriter, req *http.Request) {
 
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusInternalServerError, msg, msg)
 
+		return
+	}
+
+	render.JSON(rw, req, mapper.MapUserToUserResponse(user))
+	rw.WriteHeader(http.StatusCreated)
+}
+
+// Login godoc
+//
+//	@Summary		Login user
+//	@Description	login user
+//	@Tags			User
+//	@Accept			json
+//	@Produce		plain
+//	@Param			input	body		request.LoginRequest	true	"login info"
+//	@Success		200		{object}	response.LoginResponse
+//	@Failure		400		{string}	invalid		login	data	provided
+//	@Failure		500		{string}	internal	error
+//	@Router			/api/v1/users/login [post]
+func (h *Handler) Login(rw http.ResponseWriter, req *http.Request) {
+	var loginReq request.LoginRequest
+
+	if err := render.DecodeJSON(req.Body, &loginReq); err != nil {
+		logMsg := fmt.Sprintf("error occurred decoding request body to LoginRequest struct: %v", err)
+		respMsg := fmt.Sprintf("invalid login data provided: %v", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, logMsg, respMsg)
+
+		return
+	}
+
+	if err := loginReq.Validate(h.validator); err != nil {
+		logMsg := fmt.Sprintf("error occurred validating LoginRequest struct: %v", err)
+		respMsg := fmt.Sprintf("invalid login data provided: %v", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, logMsg, respMsg)
+
+		return
+	}
+
+	user, err := h.AuthService.Login(req.Context(), loginReq)
+	if err != nil {
+		msg := fmt.Sprintf("error occurred while user login: %v", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusInternalServerError, msg, msg)
+		return
+	}
+
+	// todo: construct jwt token
+
+	payload := map[string]any{"id": "2"}
+
+	token, err := jwtutils.CreateJWT(payload, jwt.SigningMethodHS256, "")
+	if err != nil {
 		return
 	}
 

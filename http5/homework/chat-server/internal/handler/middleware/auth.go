@@ -22,7 +22,7 @@ type AuthService interface {
 	Login(ctx context.Context, loginReq request.LoginRequest) (*entity.User, error)
 }
 
-func AuthMiddleware(authService AuthService, logger *logrus.Logger, valid *validator.Validate) Handler {
+func BasicAuthMiddleware(authService AuthService, logger *logrus.Logger, valid *validator.Validate) Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			loginReq, err := mapper.MapBasicAuthToLoginRequest(req.BasicAuth())
@@ -57,6 +57,15 @@ func AuthMiddleware(authService AuthService, logger *logrus.Logger, valid *valid
 			req.Header.Set("id", strconv.Itoa(user.ID))
 
 			next.ServeHTTP(rw, req)
+		})
+	}
+}
+
+func JWTAuthMiddleware(authService AuthService, logger *logrus.Logger, valid *validator.Validate) Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+
+			// todo: check jwt token passed in auth header
 		})
 	}
 }
