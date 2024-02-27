@@ -3,23 +3,15 @@ package in_memory
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"os"
 	"sync"
 
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
-var (
-	ErrNotExistedRow   = errors.New("no such row")
-	ErrNotExistedTable = errors.New("no such table")
-)
-
 const (
 	writePerm = 0o664
 )
-
-type Table = *orderedmap.OrderedMap[string, any]
 
 type InMemoryDB interface {
 	CreateTable(name string)
@@ -36,6 +28,8 @@ type InMemoryDB interface {
 
 	Clear()
 }
+
+type Table = *orderedmap.OrderedMap[string, any]
 
 type InMemDB struct {
 	Tables map[string]Table
@@ -104,16 +98,20 @@ func (db *InMemDB) CreateTable(name string) {
 	db.Tables[name] = orderedmap.New[string, any]()
 }
 
-func (db *InMemDB) GetTable(name string) (Table, error) {
-	db.m.RLock()
-	defer db.m.RUnlock()
-
+func (db *InMemDB) getTableNotLocking(name string) (Table, error) {
 	t, ok := db.Tables[name]
 	if ok {
 		return t, nil
 	}
 
 	return nil, ErrNotExistedTable
+}
+
+func (db *InMemDB) GetTable(name string) (Table, error) {
+	db.m.RLock()
+	defer db.m.RUnlock()
+
+	return db.getTableNotLocking(name)
 }
 
 func (db *InMemDB) DropTable(name string) {
@@ -131,13 +129,18 @@ func (db *InMemDB) Clear() {
 }
 
 func (db *InMemDB) AddRow(table string, identifier string, row any) error {
-	t, err := db.GetTable(table)
+	db.m.Lock()
+	defer db.m.Unlock()
+
+	t, err := db.getTableNotLocking(table)
 	if err != nil {
 		return err
 	}
 
-	db.m.Lock()
-	defer db.m.Unlock()
+	_, exists := t.Get(identifier)
+	if exists {
+		return ErrExistingKey
+	}
 
 	t.Set(identifier, row)
 
@@ -164,13 +167,13 @@ func (db *InMemDB) AlterRow(table string, identifier string, newRow any) error {
 }
 
 func (db *InMemDB) GetRow(table string, identifier string) (any, error) {
-	t, err := db.GetTable(table)
+	db.m.RLock()
+	defer db.m.RUnlock()
+
+	t, err := db.getTableNotLocking(table)
 	if err != nil {
 		return 0, err
 	}
-
-	db.m.RLock()
-	defer db.m.RUnlock()
 
 	row, exist := t.Get(identifier)
 	if !exist {
@@ -181,15 +184,15 @@ func (db *InMemDB) GetRow(table string, identifier string) (any, error) {
 }
 
 func (db *InMemDB) GetAllRows(table string, offset, limit int) ([]any, error) {
-	t, err := db.GetTable(table)
+	db.m.RLock()
+	defer db.m.RUnlock()
+
+	t, err := db.getTableNotLocking(table)
 	if err != nil {
 		return nil, err
 	}
 
 	res := make([]any, 0, t.Len())
-
-	db.m.RLock()
-	defer db.m.RUnlock()
 
 	count := 0
 
@@ -210,25 +213,25 @@ func (db *InMemDB) GetAllRows(table string, offset, limit int) ([]any, error) {
 }
 
 func (db *InMemDB) GetRowsCount(table string) (int, error) {
-	t, err := db.GetTable(table)
+	db.m.RLock()
+	defer db.m.RUnlock()
+
+	t, err := db.getTableNotLocking(table)
 	if err != nil {
 		return 0, err
 	}
-
-	db.m.RLock()
-	defer db.m.RUnlock()
 
 	return t.Len(), nil
 }
 
 func (db *InMemDB) DropRow(table string, identifier string) error {
-	t, err := db.GetTable(table)
+	db.m.Lock()
+	defer db.m.Unlock()
+
+	t, err := db.getTableNotLocking(table)
 	if err != nil {
 		return err
 	}
-
-	db.m.Lock()
-	defer db.m.Unlock()
 
 	t.Delete(identifier)
 

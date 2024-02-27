@@ -52,17 +52,22 @@ type Handler struct {
 	UserService    UserService
 	AuthService    AuthService
 	logger         *logrus.Logger
-	valid          *validator.Validate
+	validator      *validator.Validate
 }
 
-func New(privateMessageService PrivateMessageService, userService UserService, authService AuthService,
-	logger *logrus.Logger, valid *validator.Validate) *Handler {
+func New(
+	privateMessageService PrivateMessageService,
+	userService UserService,
+	authService AuthService,
+	logger *logrus.Logger,
+	validator *validator.Validate,
+) *Handler {
 	return &Handler{
 		MessageService: privateMessageService,
 		UserService:    userService,
 		AuthService:    authService,
 		logger:         logger,
-		valid:          valid,
+		validator:      validator,
 	}
 }
 
@@ -70,7 +75,7 @@ func (h *Handler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.valid))
+		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.validator))
 
 		r.Get("/", h.GetAllPrivateMessages)
 		r.Post("/", h.SendPrivateMessage)
@@ -79,6 +84,20 @@ func (h *Handler) Routes() *chi.Mux {
 	})
 
 	return router
+}
+
+func switchByErrorAndWriteResponse(err error, rw http.ResponseWriter, logger *logrus.Logger) {
+	switch {
+	case errors.Is(err, messageservice.ErrNoSuchReceiver):
+		errMsg := fmt.Sprintf("error occurred sending private message: %s", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, logger, http.StatusBadRequest, errMsg, errMsg)
+
+	default:
+		errMsg := fmt.Sprintf("error occurred saving private message: %s", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, logger, http.StatusInternalServerError, errMsg, errMsg)
+	}
 }
 
 // SendPrivateMessage godoc
@@ -115,7 +134,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 
 	privMsgReq.FromID = id
 
-	if err = privMsgReq.Validate(h.valid); err != nil {
+	if err = privMsgReq.Validate(h.validator); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating PrivateMessageRequest struct: %v", err)
 		respMsg := fmt.Sprintf("invalid message provided: %v", err)
 
@@ -127,21 +146,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 	message, err := h.MessageService.SendPrivateMessage(req.Context(), privMsgReq.FromID, privMsgReq.ToID, privMsgReq.Content)
 
 	if err != nil {
-		switch {
-		case errors.Is(err, messageservice.ErrNoSuchReceiver):
-			errMsg := fmt.Sprintf("error occurred sending private message: %s", err)
-
-			handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, errMsg, errMsg)
-
-			return
-
-		default:
-			errMsg := fmt.Sprintf("error occurred saving private message: %s", err)
-
-			handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusInternalServerError, errMsg, errMsg)
-
-			return
-		}
+		switchByErrorAndWriteResponse(err, rw, h.logger)
 	}
 
 	render.JSON(rw, req, mapper.MapPrivateMessageToResponse(message))
@@ -169,7 +174,7 @@ func (h *Handler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Reques
 
 	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, handler.DefaultOffset, handler.DefaultLimit)
 
-	if err = paginationOpts.Validate(h.valid); err != nil {
+	if err = paginationOpts.Validate(h.validator); err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, "", err.Error())
 
 		return
@@ -207,13 +212,13 @@ func (h *Handler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, req *htt
 	fromID, err := strconv.Atoi(chi.URLParam(req, "id"))
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, handler.DefaultOffset, handler.DefaultLimit)
 
-	if err = paginationOpts.Validate(h.valid); err != nil {
+	if err = paginationOpts.Validate(h.validator); err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, "", err.Error())
-
 		return
 	}
 

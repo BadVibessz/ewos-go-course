@@ -2,8 +2,10 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"math"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
@@ -13,14 +15,20 @@ import (
 )
 
 type UserRepoInMemDB struct {
-	DB inmemory.InMemoryDB
+	DB      inmemory.InMemoryDB
+	counter int
+	mutex   sync.RWMutex
 }
 
 func NewInMemUserRepo(db inmemory.InMemoryDB) *UserRepoInMemDB {
-	repo := UserRepoInMemDB{DB: db}
+	repo := UserRepoInMemDB{
+		DB:      db,
+		counter: 1,
+		mutex:   sync.RWMutex{},
+	}
 
 	_, err := repo.DB.GetTable(UserTableName)
-	if err != nil {
+	if err != nil && errors.Is(err, inmemory.ErrNotExistedTable) {
 		repo.DB.CreateTable(UserTableName)
 	}
 
@@ -46,18 +54,18 @@ func (ur *UserRepoInMemDB) GetAllUsers(_ context.Context, offset, limit int) []*
 }
 
 func (ur *UserRepoInMemDB) AddUser(_ context.Context, user entity.User) (*entity.User, error) {
-	idOffset, err := ur.DB.GetRowsCount(UserTableName)
-	if err != nil {
-		return nil, err
-	}
+	ur.mutex.Lock()
+	defer ur.mutex.Unlock()
 
 	now := time.Now()
 
-	user.ID = idOffset + 1
+	user.ID = ur.counter
 	user.CreatedAt = now
 	user.UpdatedAt = now
 
-	err = ur.DB.AddRow(UserTableName, strconv.Itoa(user.ID), user)
+	ur.counter++
+
+	err := ur.DB.AddRow(UserTableName, strconv.Itoa(user.ID), user)
 	if err != nil {
 		return nil, err
 	}

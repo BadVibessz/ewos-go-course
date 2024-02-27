@@ -46,17 +46,21 @@ type Handler struct {
 	MessageService MessageService
 	AuthService    AuthService
 	logger         *logrus.Logger
-	valid          *validator.Validate
+	validator      *validator.Validate
 }
 
-func New(userService UserService, messageService MessageService, authService AuthService,
-	logger *logrus.Logger, valid *validator.Validate) *Handler {
+func New(userService UserService,
+	messageService MessageService,
+	authService AuthService,
+	logger *logrus.Logger,
+	validator *validator.Validate,
+) *Handler {
 	return &Handler{
 		UserService:    userService,
 		MessageService: messageService,
 		AuthService:    authService,
 		logger:         logger,
-		valid:          valid,
+		validator:      validator,
 	}
 }
 
@@ -68,7 +72,7 @@ func (h *Handler) Routes() *chi.Mux {
 	})
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.valid))
+		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.validator))
 		r.Get("/all", h.GetAll)
 		r.Get("/messages", h.GetAllUsersThatSentMessage)
 	})
@@ -100,7 +104,7 @@ func (h *Handler) Register(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := registerReq.Validate(h.valid); err != nil {
+	if err := registerReq.Validate(h.validator); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating RegisterRequest struct: %v", err)
 		respMsg := fmt.Sprintf("invalid registration data provided: %v", err)
 
@@ -135,7 +139,7 @@ func (h *Handler) Register(rw http.ResponseWriter, req *http.Request) {
 func (h *Handler) GetAll(rw http.ResponseWriter, req *http.Request) {
 	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, handler.DefaultOffset, handler.DefaultLimit)
 
-	if err := paginationOpts.Validate(h.valid); err != nil {
+	if err := paginationOpts.Validate(h.validator); err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, "", err.Error())
 
 		return

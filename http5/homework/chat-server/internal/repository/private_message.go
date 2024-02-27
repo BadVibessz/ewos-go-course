@@ -3,8 +3,10 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
@@ -13,14 +15,20 @@ import (
 )
 
 type PrivateMessageInMemRepo struct {
-	DB inmemory.InMemoryDB
+	DB      inmemory.InMemoryDB
+	counter int
+	mutex   sync.RWMutex
 }
 
 func NewInMemPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageInMemRepo {
-	repo := PrivateMessageInMemRepo{DB: db}
+	repo := PrivateMessageInMemRepo{
+		DB:      db,
+		counter: 1,
+		mutex:   sync.RWMutex{},
+	}
 
 	_, err := repo.DB.GetTable(PrivateMessageTableName)
-	if err != nil {
+	if err != nil && errors.Is(err, inmemory.ErrNotExistedTable) {
 		repo.DB.CreateTable(PrivateMessageTableName)
 	}
 
@@ -28,18 +36,18 @@ func NewInMemPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageInMemRepo
 }
 
 func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg entity.PrivateMessage) (*entity.PrivateMessage, error) {
-	idOffset, err := pr.DB.GetRowsCount(PrivateMessageTableName)
-	if err != nil {
-		return nil, err
-	}
+	pr.mutex.Lock()
+	defer pr.mutex.Unlock()
 
 	now := time.Now()
 
-	msg.ID = idOffset + 1
+	msg.ID = pr.counter
 	msg.SentAt = now
 	msg.EditedAt = now
 
-	err = pr.DB.AddRow(PrivateMessageTableName, strconv.Itoa(msg.ID), msg)
+	pr.counter++
+
+	err := pr.DB.AddRow(PrivateMessageTableName, strconv.Itoa(msg.ID), msg)
 	if err != nil {
 		return nil, err
 	}

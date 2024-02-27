@@ -47,17 +47,22 @@ type Handler struct {
 	UserService    UserService
 	AuthService    AuthService
 	logger         *logrus.Logger
-	valid          *validator.Validate
+	validator      *validator.Validate
 }
 
-func New(publicMessageService PublicMessageService, userService UserService, authService AuthService,
-	logger *logrus.Logger, valid *validator.Validate) *Handler {
+func New(
+	publicMessageService PublicMessageService,
+	userService UserService,
+	authService AuthService,
+	logger *logrus.Logger,
+	validator *validator.Validate,
+) *Handler {
 	return &Handler{
 		MessageService: publicMessageService,
 		UserService:    userService,
 		AuthService:    authService,
 		logger:         logger,
-		valid:          valid,
+		validator:      validator,
 	}
 }
 
@@ -65,7 +70,7 @@ func (h *Handler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.valid))
+		r.Use(middleware.AuthMiddleware(h.AuthService, h.logger, h.validator))
 
 		r.Get("/", h.GetAllPublicMessages)
 		r.Post("/", h.SendPublicMessage)
@@ -89,7 +94,7 @@ func (h *Handler) Routes() *chi.Mux {
 func (h *Handler) GetAllPublicMessages(rw http.ResponseWriter, req *http.Request) {
 	paginationOpts := handlerinternalutils.GetPaginationOptsFromQuery(req, handler.DefaultOffset, handler.DefaultLimit)
 
-	if err := paginationOpts.Validate(h.valid); err != nil {
+	if err := paginationOpts.Validate(h.validator); err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, "", err.Error())
 
 		return
@@ -134,7 +139,7 @@ func (h *Handler) SendPublicMessage(rw http.ResponseWriter, req *http.Request) {
 
 	pubMsgReq.FromID = id
 
-	if err = pubMsgReq.Validate(h.valid); err != nil {
+	if err = pubMsgReq.Validate(h.validator); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating PublicMessageRequest struct: %s", err)
 		respMsg := fmt.Sprintf("invalid message provided: %s", err)
 
