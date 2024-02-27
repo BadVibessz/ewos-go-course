@@ -15,16 +15,14 @@ import (
 )
 
 type UserRepoInMemDB struct {
-	DB      inmemory.InMemoryDB
-	counter int
-	mutex   sync.RWMutex
+	DB    inmemory.InMemoryDB
+	mutex sync.RWMutex
 }
 
 func NewInMemUserRepo(db inmemory.InMemoryDB) *UserRepoInMemDB {
 	repo := UserRepoInMemDB{
-		DB:      db,
-		counter: 1,
-		mutex:   sync.RWMutex{},
+		DB:    db,
+		mutex: sync.RWMutex{},
 	}
 
 	_, err := repo.DB.GetTable(UserTableName)
@@ -57,16 +55,18 @@ func (ur *UserRepoInMemDB) AddUser(_ context.Context, user entity.User) (*entity
 	ur.mutex.Lock()
 	defer ur.mutex.Unlock()
 
+	idOffset, err := ur.DB.GetTableCounter(UserTableName)
+	if err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 
-	user.ID = ur.counter
+	user.ID = idOffset + 1
 	user.CreatedAt = now
 	user.UpdatedAt = now
 
-	ur.counter++
-
-	err := ur.DB.AddRow(UserTableName, strconv.Itoa(user.ID), user)
-	if err != nil {
+	if err = ur.DB.AddRow(UserTableName, strconv.Itoa(user.ID), user); err != nil {
 		return nil, err
 	}
 
