@@ -55,7 +55,7 @@ func (pr *PublicMessageInMemRepo) AddPublicMessage(_ context.Context, msg entity
 	return &msg, nil
 }
 
-func (pr *PublicMessageInMemRepo) GetAllPublicMessages(_ context.Context, offset, limit int) []*entity.PublicMessage {
+func (pr *PublicMessageInMemRepo) getAllPublicMessages(_ context.Context, offset, limit int) []*entity.PublicMessage {
 	rows, err := pr.DB.GetAllRows(PublicMessageTableName, offset, limit)
 	if err != nil {
 		return nil
@@ -75,7 +75,14 @@ func (pr *PublicMessageInMemRepo) GetAllPublicMessages(_ context.Context, offset
 	return res
 }
 
-func (pr *PublicMessageInMemRepo) GetPublicMessage(_ context.Context, id int) (*entity.PublicMessage, error) {
+func (pr *PublicMessageInMemRepo) GetAllPublicMessages(ctx context.Context, offset, limit int) []*entity.PublicMessage {
+	pr.mutex.RLock()
+	defer pr.mutex.RUnlock()
+
+	return pr.getAllPublicMessages(ctx, offset, limit)
+}
+
+func (pr *PublicMessageInMemRepo) getPublicMessage(_ context.Context, id int) (*entity.PublicMessage, error) {
 	row, err := pr.DB.GetRow(PublicMessageTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, ErrNoSuchPublicMessage
@@ -87,4 +94,11 @@ func (pr *PublicMessageInMemRepo) GetPublicMessage(_ context.Context, id int) (*
 	}
 
 	return &msg, nil
+}
+
+func (pr *PublicMessageInMemRepo) GetPublicMessage(ctx context.Context, id int) (*entity.PublicMessage, error) {
+	pr.mutex.RLock()
+	defer pr.mutex.RUnlock()
+
+	return pr.getPublicMessage(ctx, id)
 }

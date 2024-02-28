@@ -55,7 +55,7 @@ func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg enti
 	return &msg, nil
 }
 
-func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(_ context.Context, offset, limit int) []*entity.PrivateMessage {
+func (pr *PrivateMessageInMemRepo) getAllPrivateMessages(_ context.Context, offset, limit int) []*entity.PrivateMessage {
 	rows, err := pr.DB.GetAllRows(PrivateMessageTableName, offset, limit)
 	if err != nil {
 		return nil
@@ -75,7 +75,14 @@ func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(_ context.Context, offs
 	return res
 }
 
-func (pr *PrivateMessageInMemRepo) GetPrivateMessage(_ context.Context, id int) (*entity.PrivateMessage, error) {
+func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(ctx context.Context, offset, limit int) []*entity.PrivateMessage {
+	pr.mutex.RLock()
+	defer pr.mutex.RUnlock()
+
+	return pr.getAllPrivateMessages(ctx, offset, limit)
+}
+
+func (pr *PrivateMessageInMemRepo) getPrivateMessage(_ context.Context, id int) (*entity.PrivateMessage, error) {
 	row, err := pr.DB.GetRow(PrivateMessageTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, ErrNoSuchPrivateMessage
@@ -87,4 +94,11 @@ func (pr *PrivateMessageInMemRepo) GetPrivateMessage(_ context.Context, id int) 
 	}
 
 	return &msg, nil
+}
+
+func (pr *PrivateMessageInMemRepo) GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error) {
+	pr.mutex.RLock()
+	defer pr.mutex.RUnlock()
+
+	return pr.getPrivateMessage(ctx, id)
 }

@@ -1,3 +1,4 @@
+// nolint
 package repository
 
 import (
@@ -15,8 +16,8 @@ import (
 )
 
 type UserRepoInMemDB struct {
-	DB    inmemory.InMemoryDB
 	mutex sync.RWMutex
+	DB    inmemory.InMemoryDB
 }
 
 func NewInMemUserRepo(db inmemory.InMemoryDB) *UserRepoInMemDB {
@@ -33,7 +34,7 @@ func NewInMemUserRepo(db inmemory.InMemoryDB) *UserRepoInMemDB {
 	return &repo
 }
 
-func (ur *UserRepoInMemDB) GetAllUsers(_ context.Context, offset, limit int) []*entity.User {
+func (ur *UserRepoInMemDB) getAllUsers(_ context.Context, offset, limit int) []*entity.User {
 	rows, err := ur.DB.GetAllRows(UserTableName, offset, limit)
 	if err != nil {
 		return nil
@@ -49,6 +50,13 @@ func (ur *UserRepoInMemDB) GetAllUsers(_ context.Context, offset, limit int) []*
 	}
 
 	return res
+}
+
+func (ur *UserRepoInMemDB) GetAllUsers(ctx context.Context, offset, limit int) []*entity.User {
+	ur.mutex.RLock()
+	defer ur.mutex.RUnlock()
+
+	return ur.getAllUsers(ctx, offset, limit)
 }
 
 func (ur *UserRepoInMemDB) AddUser(_ context.Context, user entity.User) (*entity.User, error) {
@@ -73,7 +81,7 @@ func (ur *UserRepoInMemDB) AddUser(_ context.Context, user entity.User) (*entity
 	return &user, nil
 }
 
-func (ur *UserRepoInMemDB) GetUserByID(_ context.Context, id int) (*entity.User, error) {
+func (ur *UserRepoInMemDB) getUserByID(_ context.Context, id int) (*entity.User, error) {
 	row, err := ur.DB.GetRow(UserTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, ErrNoSuchUser
@@ -87,8 +95,15 @@ func (ur *UserRepoInMemDB) GetUserByID(_ context.Context, id int) (*entity.User,
 	return &user, nil
 }
 
-func (ur *UserRepoInMemDB) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
-	users := ur.GetAllUsers(ctx, 0, math.MaxInt64)
+func (ur *UserRepoInMemDB) GetUserByID(ctx context.Context, id int) (*entity.User, error) {
+	ur.mutex.RLock()
+	defer ur.mutex.RUnlock()
+
+	return ur.getUserByID(ctx, id)
+}
+
+func (ur *UserRepoInMemDB) getUserByEmail(ctx context.Context, email string) (*entity.User, error) {
+	users := ur.getAllUsers(ctx, 0, math.MaxInt64)
 	if len(users) == 0 {
 		return nil, ErrNoSuchUser
 	}
@@ -103,8 +118,15 @@ func (ur *UserRepoInMemDB) GetUserByEmail(ctx context.Context, email string) (*e
 	return user, nil
 }
 
-func (ur *UserRepoInMemDB) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
-	users := ur.GetAllUsers(ctx, 0, math.MaxInt64)
+func (ur *UserRepoInMemDB) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
+	ur.mutex.RLock()
+	defer ur.mutex.RUnlock()
+
+	return ur.getUserByEmail(ctx, email)
+}
+
+func (ur *UserRepoInMemDB) getUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+	users := ur.getAllUsers(ctx, 0, math.MaxInt64)
 	if len(users) == 0 {
 		return nil, ErrNoSuchUser
 	}
@@ -120,14 +142,23 @@ func (ur *UserRepoInMemDB) GetUserByUsername(ctx context.Context, username strin
 	return user, nil
 }
 
+func (ur *UserRepoInMemDB) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+	ur.mutex.RLock()
+	defer ur.mutex.RUnlock()
+
+	return ur.getUserByUsername(ctx, username)
+}
+
 func (ur *UserRepoInMemDB) DeleteUser(ctx context.Context, id int) (*entity.User, error) {
-	user, err := ur.GetUserByID(ctx, id)
+	ur.mutex.Lock()
+	defer ur.mutex.Unlock()
+
+	user, err := ur.getUserByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	err = ur.DB.DropRow(UserTableName, strconv.Itoa(id))
-	if err != nil {
+	if err = ur.DB.DropRow(UserTableName, strconv.Itoa(id)); err != nil {
 		return nil, ErrNoSuchUser
 	}
 
@@ -135,7 +166,10 @@ func (ur *UserRepoInMemDB) DeleteUser(ctx context.Context, id int) (*entity.User
 }
 
 func (ur *UserRepoInMemDB) UpdateUser(ctx context.Context, id int, updated entity.User) (*entity.User, error) {
-	user, err := ur.GetUserByID(ctx, id)
+	ur.mutex.Lock()
+	defer ur.mutex.Unlock()
+
+	user, err := ur.getUserByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -153,12 +187,15 @@ func (ur *UserRepoInMemDB) UpdateUser(ctx context.Context, id int, updated entit
 }
 
 func (ur *UserRepoInMemDB) CheckUniqueConstraints(ctx context.Context, email, username string) error {
-	got, err := ur.GetUserByEmail(ctx, email)
+	ur.mutex.RLock()
+	defer ur.mutex.RUnlock()
+
+	got, err := ur.getUserByEmail(ctx, email)
 	if got != nil || err == nil {
 		return ErrEmailExists
 	}
 
-	got, err = ur.GetUserByUsername(ctx, username)
+	got, err = ur.getUserByUsername(ctx, username)
 	if got != nil || err == nil {
 		return ErrUsernameExists
 	}
