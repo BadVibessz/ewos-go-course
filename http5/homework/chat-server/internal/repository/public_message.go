@@ -26,7 +26,7 @@ func NewInMemPublicMessageRepo(db inmemory.InMemoryDB) *PublicMessageInMemRepo {
 	}
 
 	_, err := repo.DB.GetTable(PublicMessageTableName)
-	if err != nil && errors.Is(err, inmemory.ErrNotExistedTable) {
+	if errors.Is(err, inmemory.ErrNotExistedTable) {
 		repo.DB.CreateTable(PublicMessageTableName)
 	}
 

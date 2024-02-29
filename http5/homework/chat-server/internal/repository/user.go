@@ -27,7 +27,7 @@ func NewInMemUserRepo(db inmemory.InMemoryDB) *UserRepoInMemDB {
 	}
 
 	_, err := repo.DB.GetTable(UserTableName)
-	if err != nil && errors.Is(err, inmemory.ErrNotExistedTable) {
+	if errors.Is(err, inmemory.ErrNotExistedTable) {
 		repo.DB.CreateTable(UserTableName)
 	}
 
