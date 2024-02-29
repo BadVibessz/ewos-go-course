@@ -15,11 +15,106 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "login user via JWT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "login info",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "description": "to register new user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register new user",
+                "parameters": [
+                    {
+                        "description": "registration info",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.GetUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/messages/private": {
             "get": {
                 "security": [
                     {
                         "BasicAuth": []
+                    },
+                    {
+                        "JWT": []
                     }
                 ],
                 "description": "Get all private messages that were sent to chat",
@@ -68,6 +163,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BasicAuth": []
+                    },
+                    {
+                        "JWT": []
                     }
                 ],
                 "description": "Send private message to user",
@@ -128,6 +226,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BasicAuth": []
+                    },
+                    {
+                        "JWT": []
                     }
                 ],
                 "description": "Get all private messages from user",
@@ -185,6 +286,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BasicAuth": []
+                    },
+                    {
+                        "JWT": []
                     }
                 ],
                 "description": "Get all public messages that were sent to chat",
@@ -233,6 +337,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BasicAuth": []
+                    },
+                    {
+                        "JWT": []
                     }
                 ],
                 "description": "Send public message to chat",
@@ -287,6 +394,9 @@ const docTemplate = `{
                 "security": [
                     {
                         "BasicAuth": []
+                    },
+                    {
+                        "JWT": []
                     }
                 ],
                 "description": "Get all users",
@@ -316,57 +426,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/users/login": {
-            "post": {
-                "description": "login user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "text/plain"
-                ],
-                "tags": [
-                    "User"
-                ],
-                "summary": "Login user",
-                "parameters": [
-                    {
-                        "description": "login info",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.LoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.LoginResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/users/messages": {
             "get": {
                 "security": [
                     {
                         "BasicAuth": []
+                    },
+                    {
+                        "JWT": []
                     }
                 ],
                 "description": "Get all users that sent message to current user",
@@ -389,52 +456,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/users/register": {
-            "post": {
-                "description": "to register new user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "text/plain"
-                ],
-                "tags": [
-                    "User"
-                ],
-                "summary": "Register new user",
-                "parameters": [
-                    {
-                        "description": "registration info",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.RegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.GetUserResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -596,6 +617,11 @@ const docTemplate = `{
     "securityDefinitions": {
         "BasicAuth": {
             "type": "basic"
+        },
+        "JWT": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

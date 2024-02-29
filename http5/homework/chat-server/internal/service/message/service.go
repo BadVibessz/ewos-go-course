@@ -22,14 +22,7 @@ type PublicMessageRepo interface {
 }
 
 type UserRepo interface {
-	AddUser(ctx context.Context, user entity.User) (*entity.User, error)
 	GetUserByID(ctx context.Context, id int) (*entity.User, error)
-	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
-	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
-	GetAllUsers(ctx context.Context, offset, limit int) []*entity.User
-	DeleteUser(ctx context.Context, id int) (*entity.User, error)
-	UpdateUser(ctx context.Context, id int, updateModel entity.User) (*entity.User, error)
-	CheckUniqueConstraints(ctx context.Context, email, username string) error
 }
 
 var (
@@ -37,21 +30,21 @@ var (
 	ErrNoSuchSender   = errors.New("no such sender")
 )
 
-type MessageService struct {
+type Service struct {
 	PrivateMessageRepo PrivateMessageRepo
 	PublicMessageRepo  PublicMessageRepo
 	UserRepo           UserRepo
 }
 
-func NewMessageService(pr PrivateMessageRepo, pb PublicMessageRepo, ur UserRepo) *MessageService {
-	return &MessageService{
+func New(pr PrivateMessageRepo, pb PublicMessageRepo, ur UserRepo) *Service {
+	return &Service{
 		PrivateMessageRepo: pr,
 		PublicMessageRepo:  pb,
 		UserRepo:           ur,
 	}
 }
 
-func (ms *MessageService) SendPrivateMessage(ctx context.Context, fromID, toID int, content string) (*entity.PrivateMessage, error) {
+func (ms *Service) SendPrivateMessage(ctx context.Context, fromID, toID int, content string) (*entity.PrivateMessage, error) {
 	userFrom, err := ms.UserRepo.GetUserByID(ctx, fromID)
 	if err != nil {
 		return nil, ErrNoSuchSender
@@ -76,7 +69,7 @@ func (ms *MessageService) SendPrivateMessage(ctx context.Context, fromID, toID i
 	return created, nil
 }
 
-func (ms *MessageService) SendPublicMessage(ctx context.Context, fromID int, content string) (*entity.PublicMessage, error) {
+func (ms *Service) SendPublicMessage(ctx context.Context, fromID int, content string) (*entity.PublicMessage, error) {
 	userFrom, err := ms.UserRepo.GetUserByID(ctx, fromID)
 	if err != nil {
 		return nil, err
@@ -95,7 +88,7 @@ func (ms *MessageService) SendPublicMessage(ctx context.Context, fromID int, con
 	return created, nil
 }
 
-func (ms *MessageService) GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error) {
+func (ms *Service) GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error) {
 	// todo: we should validate that user that requests this message is a sender or receiver
 	msg, err := ms.PrivateMessageRepo.GetPrivateMessage(ctx, id)
 	if err != nil {
@@ -105,7 +98,7 @@ func (ms *MessageService) GetPrivateMessage(ctx context.Context, id int) (*entit
 	return msg, nil
 }
 
-func (ms *MessageService) GetAllPrivateMessages(ctx context.Context, userToID int, offset, limit int) []*entity.PrivateMessage {
+func (ms *Service) GetAllPrivateMessages(ctx context.Context, userToID int, offset, limit int) []*entity.PrivateMessage {
 	messages := ms.PrivateMessageRepo.GetAllPrivateMessages(ctx, 0, math.MaxInt64)
 
 	// return only messages that were sent to current user
@@ -114,7 +107,7 @@ func (ms *MessageService) GetAllPrivateMessages(ctx context.Context, userToID in
 	return sliceutils.Slice(messages, offset, limit)
 }
 
-func (ms *MessageService) GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) ([]*entity.PrivateMessage, error) {
+func (ms *Service) GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) ([]*entity.PrivateMessage, error) {
 	_, err := ms.UserRepo.GetUserByID(ctx, fromID)
 	if err != nil {
 		return nil, err
@@ -126,7 +119,7 @@ func (ms *MessageService) GetAllPrivateMessagesFromUser(ctx context.Context, toI
 	return sliceutils.Slice(messages, offset, limit), nil
 }
 
-func (ms *MessageService) GetPublicMessage(ctx context.Context, id int) (*entity.PublicMessage, error) {
+func (ms *Service) GetPublicMessage(ctx context.Context, id int) (*entity.PublicMessage, error) {
 	msg, err := ms.PublicMessageRepo.GetPublicMessage(ctx, id)
 	if err != nil {
 		return nil, err
@@ -135,11 +128,11 @@ func (ms *MessageService) GetPublicMessage(ctx context.Context, id int) (*entity
 	return msg, nil
 }
 
-func (ms *MessageService) GetAllPublicMessages(ctx context.Context, offset, limit int) []*entity.PublicMessage {
+func (ms *Service) GetAllPublicMessages(ctx context.Context, offset, limit int) []*entity.PublicMessage {
 	return ms.PublicMessageRepo.GetAllPublicMessages(ctx, offset, limit)
 }
 
-func (ms *MessageService) GetAllUsersThatSentMessage(ctx context.Context, toID int, offset, limit int) []*entity.User {
+func (ms *Service) GetAllUsersThatSentMessage(ctx context.Context, toID int, offset, limit int) []*entity.User {
 	messages := ms.GetAllPrivateMessages(ctx, toID, offset, limit)
 	usersDuplicates := sliceutils.Map(messages, func(msg *entity.PrivateMessage) *entity.User { return msg.From })
 

@@ -7,7 +7,6 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/mapper"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware"
 	handlerinternalutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/handler"
 	"github.com/go-playground/validator/v10"
 	"net/http"
@@ -38,29 +37,28 @@ type UserService interface {
 	DeleteUser(ctx context.Context, id int) (*entity.User, error)
 }
 
-type AuthService interface {
-	Login(ctx context.Context, loginReq request.LoginRequest) (*entity.User, error)
-}
+type Middleware = func(http.Handler) http.Handler
 
 type Handler struct {
 	MessageService PublicMessageService
 	UserService    UserService
-	AuthService    AuthService
-	logger         *logrus.Logger
-	validator      *validator.Validate
+	Middlewares    []Middleware
+
+	logger    *logrus.Logger
+	validator *validator.Validate
 }
 
 func New(
 	publicMessageService PublicMessageService,
 	userService UserService,
-	authService AuthService,
 	logger *logrus.Logger,
 	validator *validator.Validate,
+	middlewares ...Middleware,
 ) *Handler {
 	return &Handler{
 		MessageService: publicMessageService,
 		UserService:    userService,
-		AuthService:    authService,
+		Middlewares:    middlewares,
 		logger:         logger,
 		validator:      validator,
 	}
@@ -70,7 +68,7 @@ func (h *Handler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.BasicAuthMiddleware(h.AuthService, h.logger, h.validator))
+		r.Use(h.Middlewares...)
 
 		r.Get("/", h.GetAllPublicMessages)
 		r.Post("/", h.SendPublicMessage)
@@ -84,6 +82,7 @@ func (h *Handler) Routes() *chi.Mux {
 //	@Summary		Get all public messages
 //	@Description	Get all public messages that were sent to chat
 //	@Security		BasicAuth
+//	@Security		JWT
 //	@Tags			Message
 //	@Produce		json
 //	@Param			offset	query		int	true	"Offset"
@@ -111,6 +110,7 @@ func (h *Handler) GetAllPublicMessages(rw http.ResponseWriter, req *http.Request
 //	@Summary		Send public message to chat
 //	@Description	Send public message to chat
 //	@Security		BasicAuth
+//	@Security		JWT
 //	@Tags			Message
 //	@Accept			json
 //	@Produce		json

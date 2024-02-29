@@ -16,7 +16,6 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/mapper"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 
 	messageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
@@ -43,14 +42,12 @@ type UserService interface {
 	DeleteUser(ctx context.Context, id int) (*entity.User, error)
 }
 
-type AuthService interface {
-	Login(ctx context.Context, loginReq request.LoginRequest) (*entity.User, error)
-}
+type Middleware = func(http.Handler) http.Handler
 
 type Handler struct {
 	MessageService PrivateMessageService
 	UserService    UserService
-	AuthService    AuthService
+	Middlewares    []Middleware
 	logger         *logrus.Logger
 	validator      *validator.Validate
 }
@@ -58,14 +55,14 @@ type Handler struct {
 func New(
 	privateMessageService PrivateMessageService,
 	userService UserService,
-	authService AuthService,
 	logger *logrus.Logger,
 	validator *validator.Validate,
+	middlewares ...Middleware,
 ) *Handler {
 	return &Handler{
 		MessageService: privateMessageService,
 		UserService:    userService,
-		AuthService:    authService,
+		Middlewares:    middlewares,
 		logger:         logger,
 		validator:      validator,
 	}
@@ -75,7 +72,7 @@ func (h *Handler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Group(func(r chi.Router) {
-		r.Use(middleware.BasicAuthMiddleware(h.AuthService, h.logger, h.validator))
+		r.Use(h.Middlewares...)
 
 		r.Get("/", h.GetAllPrivateMessages)
 		r.Post("/", h.SendPrivateMessage)
@@ -105,6 +102,7 @@ func switchByErrorAndWriteResponse(err error, rw http.ResponseWriter, logger *lo
 //	@Summary		Send private message to user
 //	@Description	Send private message to user
 //	@Security		BasicAuth
+//	@Security		JWT
 //	@Tags			Message
 //	@Accept			json
 //	@Produce		json
@@ -158,6 +156,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 //	@Summary		Get all private messages
 //	@Description	Get all private messages that were sent to chat
 //	@Security		BasicAuth
+//	@Security		JWT
 //	@Tags			Message
 //	@Produce		json
 //	@Param			offset	query		int	true	"Offset"
@@ -191,6 +190,7 @@ func (h *Handler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Reques
 //	@Summary		Get all private messages from user
 //	@Description	Get all private messages from user
 //	@Security		BasicAuth
+//	@Security		JWT
 //	@Tags			Message
 //	@Produce		json
 //	@Param			offset	query	int	true	"Offset"

@@ -108,6 +108,66 @@ info:
   title: Chat API
   version: "1.0"
 paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: login user via JWT
+      parameters:
+      - description: login info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.LoginRequest'
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Login user
+      tags:
+      - Auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: to register new user
+      parameters:
+      - description: registration info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.RegisterRequest'
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.GetUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Register new user
+      tags:
+      - Auth
   /api/v1/messages/private:
     get:
       description: Get all private messages that were sent to chat
@@ -137,6 +197,7 @@ paths:
             type: string
       security:
       - BasicAuth: []
+      - JWT: []
       summary: Get all private messages
       tags:
       - Message
@@ -174,6 +235,7 @@ paths:
             type: string
       security:
       - BasicAuth: []
+      - JWT: []
       summary: Send private message to user
       tags:
       - Message
@@ -211,6 +273,7 @@ paths:
             type: string
       security:
       - BasicAuth: []
+      - JWT: []
       summary: Get all private messages from user
       tags:
       - Message
@@ -243,6 +306,7 @@ paths:
             type: string
       security:
       - BasicAuth: []
+      - JWT: []
       summary: Get all public messages
       tags:
       - Message
@@ -276,6 +340,7 @@ paths:
             type: string
       security:
       - BasicAuth: []
+      - JWT: []
       summary: Send public message to chat
       tags:
       - Message
@@ -297,37 +362,8 @@ paths:
             type: string
       security:
       - BasicAuth: []
+      - JWT: []
       summary: Get all users
-      tags:
-      - User
-  /api/v1/users/login:
-    post:
-      consumes:
-      - application/json
-      description: login user
-      parameters:
-      - description: login info
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/request.LoginRequest'
-      produces:
-      - text/plain
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.LoginResponse'
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      summary: Login user
       tags:
       - User
   /api/v1/users/messages:
@@ -348,40 +384,15 @@ paths:
             type: string
       security:
       - BasicAuth: []
+      - JWT: []
       summary: Get all users that sent message to current user
-      tags:
-      - User
-  /api/v1/users/register:
-    post:
-      consumes:
-      - application/json
-      description: to register new user
-      parameters:
-      - description: registration info
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/request.RegisterRequest'
-      produces:
-      - text/plain
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.GetUserResponse'
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-        "500":
-          description: Internal Server Error
-          schema:
-            type: string
-      summary: Register new user
       tags:
       - User
 securityDefinitions:
   BasicAuth:
     type: basic
+  JWT:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

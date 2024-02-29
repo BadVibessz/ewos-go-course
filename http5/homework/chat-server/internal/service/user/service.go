@@ -19,15 +19,15 @@ type UserRepo interface {
 	CheckUniqueConstraints(ctx context.Context, email, username string) error
 }
 
-type UserService struct {
+type Service struct {
 	UserRepo UserRepo
 }
 
-func NewUserService(ur UserRepo) *UserService {
-	return &UserService{UserRepo: ur}
+func New(ur UserRepo) *Service {
+	return &Service{UserRepo: ur}
 }
 
-func (us *UserService) RegisterUser(ctx context.Context, user entity.User) (*entity.User, error) {
+func (us *Service) RegisterUser(ctx context.Context, user entity.User) (*entity.User, error) {
 	// ensure that user with this email and username does not exist
 	err := us.UserRepo.CheckUniqueConstraints(ctx, user.Email, user.Username)
 	if err != nil {
@@ -49,7 +49,7 @@ func (us *UserService) RegisterUser(ctx context.Context, user entity.User) (*ent
 	return created, nil
 }
 
-func (us *UserService) GetUserByID(ctx context.Context, id int) (*entity.User, error) {
+func (us *Service) GetUserByID(ctx context.Context, id int) (*entity.User, error) {
 	user, err := us.UserRepo.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (us *UserService) GetUserByID(ctx context.Context, id int) (*entity.User, e
 	return user, nil
 }
 
-func (us *UserService) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (us *Service) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
 	user, err := us.UserRepo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (us *UserService) GetUserByEmail(ctx context.Context, email string) (*entit
 	return user, nil
 }
 
-func (us *UserService) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+func (us *Service) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
 	user, err := us.UserRepo.GetUserByUsername(ctx, username)
 	if err != nil {
 		return nil, err
@@ -76,11 +76,11 @@ func (us *UserService) GetUserByUsername(ctx context.Context, username string) (
 	return user, nil
 }
 
-func (us *UserService) GetAllUsers(ctx context.Context, offset, limit int) []*entity.User {
+func (us *Service) GetAllUsers(ctx context.Context, offset, limit int) []*entity.User {
 	return us.UserRepo.GetAllUsers(ctx, offset, limit)
 }
 
-func (us *UserService) UpdateUser(ctx context.Context, id int, updateModel entity.User) (*entity.User, error) {
+func (us *Service) UpdateUser(ctx context.Context, id int, updateModel entity.User) (*entity.User, error) {
 	updated, err := us.UserRepo.UpdateUser(ctx, id, updateModel)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (us *UserService) UpdateUser(ctx context.Context, id int, updateModel entit
 	return updated, nil
 }
 
-func (us *UserService) DeleteUser(ctx context.Context, id int) (*entity.User, error) { // todo: authorize admin rights
+func (us *Service) DeleteUser(ctx context.Context, id int) (*entity.User, error) { // todo: authorize admin rights
 	deleted, err := us.UserRepo.DeleteUser(ctx, id)
 	if err != nil {
 		return nil, err
