@@ -69,7 +69,7 @@ func JWTAuthMiddleware(secret string, logger *logrus.Logger) Handler {
 
 			token := authHeader[len("Bearer "):] // TODO: JWT ACCESS AND REFRESH TOKEN
 
-			payload, err := jwtutils.ValidateToken(token, secret) // todo: store in .env and use viper for config
+			payload, err := jwtutils.ValidateToken(token, secret)
 			if err != nil {
 				msg := fmt.Sprintf("error occurred validating token: %v", err)
 

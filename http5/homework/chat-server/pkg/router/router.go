@@ -15,9 +15,7 @@ type (
 func MakeRoutes(basePath string, routers Routers, middlewares []Middleware) *chi.Mux {
 	r := chi.NewRouter()
 
-	for _, middleware := range middlewares {
-		r.Use(middleware)
-	}
+	r.Use(middlewares...)
 
 	for routerPath, router := range routers {
 		r.Mount(fmt.Sprintf("%s%s", basePath, routerPath), router)

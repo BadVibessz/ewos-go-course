@@ -15,7 +15,6 @@ import (
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
 
@@ -32,9 +31,8 @@ import (
 	messageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
 	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
 
-	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
-
 	middlewares "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware"
+	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 
 	httpSwagger "github.com/swaggo/http-swagger"
 
@@ -97,7 +95,7 @@ func initInMemServices(db inmemory.InMemoryDB) (*userservice.Service, *messagese
 }
 
 func initConfig() (*config.Config, error) { // todo: to internals utils?
-	viper.SetConfigName("conf")
+	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
 	viper.AddConfigPath(configPath)
@@ -168,6 +166,8 @@ func main() {
 	valid := validator.New(validator.WithRequiredStructEnabled())
 
 	authMiddleware := initAuthMiddleware(conf.Server.Auth, conf.Jwt.Secret, authService, logger, valid)
+	loggingMiddleware := middlewares.LoggingMiddleware(logger, logrus.InfoLevel)
+	recoveryMiddleware := middlewares.RecoveryMiddleware()
 
 	authHandler := authhandler.New(userService, authService, conf.Jwt, logger, valid)
 	userHandler := userhandler.New(userService, messageService, logger, valid, authMiddleware)
@@ -182,7 +182,8 @@ func main() {
 	routers["/messages/private"] = privateMessageHandler.Routes()
 
 	middlewars := []router.Middleware{
-		middleware.Recoverer,
+		recoveryMiddleware,
+		loggingMiddleware,
 	}
 
 	r := router.MakeRoutes("/chat/api/v1", routers, middlewars)
