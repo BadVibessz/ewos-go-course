@@ -3,7 +3,6 @@ package mapper
 
 import (
 	"errors"
-
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
 )
 

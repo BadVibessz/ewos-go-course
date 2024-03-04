@@ -21,9 +21,8 @@ import (
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
-type PublicMessageService interface {
-	SendPublicMessage(ctx context.Context, fromID int, content string) (*entity.PublicMessage, error)
-	GetPublicMessage(ctx context.Context, id int) (*entity.PublicMessage, error)
+type MessageService interface {
+	SendPublicMessage(ctx context.Context, msg entity.PublicMessage) (*entity.PublicMessage, error)
 	GetAllPublicMessages(ctx context.Context, offset, limit int) []*entity.PublicMessage
 }
 
@@ -40,7 +39,7 @@ type UserService interface {
 type Middleware = func(http.Handler) http.Handler
 
 type Handler struct {
-	MessageService PublicMessageService
+	MessageService MessageService
 	UserService    UserService
 	Middlewares    []Middleware
 
@@ -49,14 +48,14 @@ type Handler struct {
 }
 
 func New(
-	publicMessageService PublicMessageService,
+	messageService MessageService,
 	userService UserService,
 	logger *logrus.Logger,
 	validator *validator.Validate,
 	middlewares ...Middleware,
 ) *Handler {
 	return &Handler{
-		MessageService: publicMessageService,
+		MessageService: messageService,
 		UserService:    userService,
 		Middlewares:    middlewares,
 		logger:         logger,
@@ -120,7 +119,7 @@ func (h *Handler) GetAllPublicMessages(rw http.ResponseWriter, req *http.Request
 //	@Failure		500		{string}	internal	error
 //	@Router			/api/v1/messages/public [post]
 func (h *Handler) SendPublicMessage(rw http.ResponseWriter, req *http.Request) {
-	id, err := handlerutils.GetIntHeaderByKey(req, "id")
+	username, err := handlerutils.GetStringHeaderByKey(req, "username")
 	if err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusUnauthorized, "", err.Error())
 		return
@@ -137,7 +136,7 @@ func (h *Handler) SendPublicMessage(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	pubMsgReq.FromID = id
+	pubMsgReq.FromUsername = username
 
 	if err = pubMsgReq.Validate(h.validator); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating PublicMessageRequest struct: %s", err)
@@ -148,7 +147,7 @@ func (h *Handler) SendPublicMessage(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	message, err := h.MessageService.SendPublicMessage(req.Context(), pubMsgReq.FromID, pubMsgReq.Content)
+	message, err := h.MessageService.SendPublicMessage(req.Context(), mapper.MapSendPublicMessageRequestToEntity(pubMsgReq))
 	if err != nil {
 		logMsg := fmt.Sprintf("error occurred saving public message: %s", err)
 

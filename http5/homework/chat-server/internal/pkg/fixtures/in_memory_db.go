@@ -2,12 +2,11 @@
 package fixtures
 
 import (
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository/in-memory"
 	"strconv"
 	"time"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
-
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 )
 
@@ -41,10 +40,10 @@ func LoadFixtures(db inmemory.InMemoryDB) {
 		},
 	}
 
-	db.CreateTable(repository.UserTableName)
+	db.CreateTable(in_memory.UserTableName)
 
 	for _, user := range users {
-		err := db.AddRow(repository.UserTableName, strconv.Itoa(user.ID), user)
+		err := db.AddRow(in_memory.UserTableName, strconv.Itoa(user.ID), user)
 		if err != nil {
 			return
 		}
@@ -52,32 +51,32 @@ func LoadFixtures(db inmemory.InMemoryDB) {
 
 	pubMessages := []entity.PublicMessage{
 		{
-			ID:       1,
-			From:     &users[0],
-			Content:  "Hello everyone, I'm Test!",
-			SentAt:   now,
-			EditedAt: now,
+			ID:           1,
+			FromUsername: "test",
+			Content:      "Hello everyone, I'm Test!",
+			SentAt:       now,
+			EditedAt:     now,
 		},
 		{
-			ID:       2,
-			From:     &users[1],
-			Content:  "Hello everyone, I'm Test2 ;)",
-			SentAt:   now,
-			EditedAt: now,
+			ID:           2,
+			FromUsername: "test2",
+			Content:      "Hello everyone, I'm Test2 ;)",
+			SentAt:       now,
+			EditedAt:     now,
 		},
 		{
-			ID:       3,
-			From:     &users[2],
-			Content:  "What's up! I'm Test3",
-			SentAt:   now,
-			EditedAt: now,
+			ID:           3,
+			FromUsername: "test3",
+			Content:      "What's up! I'm Test3",
+			SentAt:       now,
+			EditedAt:     now,
 		},
 	}
 
-	db.CreateTable(repository.PublicMessageTableName)
+	db.CreateTable(in_memory.PublicMessageTableName)
 
 	for _, pubMsg := range pubMessages {
-		err := db.AddRow(repository.PublicMessageTableName, strconv.Itoa(pubMsg.ID), pubMsg)
+		err := db.AddRow(in_memory.PublicMessageTableName, strconv.Itoa(pubMsg.ID), pubMsg)
 		if err != nil {
 			return
 		}
@@ -85,43 +84,43 @@ func LoadFixtures(db inmemory.InMemoryDB) {
 
 	privMessages := []entity.PrivateMessage{
 		{
-			ID:       1,
-			From:     &users[0],
-			To:       &users[1],
-			Content:  "Excuse me, where am I?",
-			SentAt:   now,
-			EditedAt: now,
+			ID:           1,
+			FromUsername: "test",
+			ToUsername:   "test2",
+			Content:      "Excuse me, where am I?",
+			SentAt:       now,
+			EditedAt:     now,
 		},
 		{
-			ID:       2,
-			From:     &users[1],
-			To:       &users[0],
-			Content:  "Ohh.. You are being tested too!",
-			SentAt:   now,
-			EditedAt: now,
+			ID:           2,
+			FromUsername: "test2",
+			ToUsername:   "test",
+			Content:      "Ohh.. You are being tested too!",
+			SentAt:       now,
+			EditedAt:     now,
 		},
 		{
-			ID:       3,
-			From:     &users[2],
-			To:       &users[1],
-			Content:  "Have something?",
-			SentAt:   now,
-			EditedAt: now,
+			ID:           3,
+			FromUsername: "test3",
+			ToUsername:   "test2",
+			Content:      "Have something?",
+			SentAt:       now,
+			EditedAt:     now,
 		},
 		{
-			ID:       4,
-			From:     &users[1],
-			To:       &users[2],
-			Content:  "What??.. Get off me!",
-			SentAt:   now,
-			EditedAt: now,
+			ID:           4,
+			FromUsername: "test2",
+			ToUsername:   "test3",
+			Content:      "What??.. Get off me!",
+			SentAt:       now,
+			EditedAt:     now,
 		},
 	}
 
-	db.CreateTable(repository.PrivateMessageTableName)
+	db.CreateTable(in_memory.PrivateMessageTableName)
 
 	for _, privMsg := range privMessages {
-		err := db.AddRow(repository.PrivateMessageTableName, strconv.Itoa(privMsg.ID), privMsg)
+		err := db.AddRow(in_memory.PrivateMessageTableName, strconv.Itoa(privMsg.ID), privMsg)
 		if err != nil {
 			return
 		}

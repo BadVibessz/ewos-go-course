@@ -35,3 +35,12 @@ func GetIntHeaderByKey(req *http.Request, key string) (int, error) {
 
 	return val, nil
 }
+
+func GetStringHeaderByKey(req *http.Request, key string) (string, error) {
+	str := req.Header.Get(key)
+	if str == "" {
+		return str, ErrNoHeaderProvided
+	}
+
+	return str, nil
+}

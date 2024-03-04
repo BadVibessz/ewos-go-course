@@ -2,12 +2,12 @@
 -- +goose StatementBegin
 CREATE TABLE private_message
 (
-    id        bigserial                     not null,
-    from_id   integer references users (id) not null,
-    to_id     integer references users (id) not null,
-    content   text                          not null,
-    sent_at   timestamp                     not null,
-    edited_at timestamp                     not null
+    id            bigserial primary key                                      not null,
+    from_username varchar(128) references users (username) on update cascade not null,
+    to_username   varchar(128) references users (username) on update cascade not null,
+    content       text                                                       not null,
+    sent_at       timestamp                                                  not null,
+    edited_at     timestamp                                                  not null
 );
 -- +goose StatementEnd
 

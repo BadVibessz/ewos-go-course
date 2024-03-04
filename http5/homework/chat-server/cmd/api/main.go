@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/config"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository/in-memory"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"net/http"
@@ -19,8 +20,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/fixtures"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/router"
+
+	middlewares "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware"
 
 	authhandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/auth"
 	privatemessagehandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/message/private"
@@ -28,10 +30,10 @@ import (
 	userhandler "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/user"
 
 	authservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/auth"
-	messageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
+	privatemessageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message/private"
+	publicmessageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message/public"
 	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
 
-	middlewares "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware"
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -82,16 +84,17 @@ func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	return inMemDB, savedChan
 }
 
-func initInMemServices(db inmemory.InMemoryDB) (*userservice.Service, *messageservice.Service, *authservice.Service) {
-	userRepo := repository.NewInMemUserRepo(db)
-	privateMsgRepo := repository.NewInMemPrivateMessageRepo(db)
-	publicMsgRepo := repository.NewInMemPublicMessageRepo(db)
+func initInMemServices(db inmemory.InMemoryDB) (*userservice.Service, *publicmessageservice.Service, *privatemessageservice.Service, *authservice.Service) {
+	userRepo := in_memory.NewInMemUserRepo(db)
+	privateMsgRepo := in_memory.NewInMemPrivateMessageRepo(db)
+	publicMsgRepo := in_memory.NewInMemPublicMessageRepo(db)
 
 	userService := userservice.New(userRepo)
-	messageService := messageservice.New(privateMsgRepo, publicMsgRepo, userRepo)
+	publicMessageService := publicmessageservice.New(publicMsgRepo, userRepo)
+	privateMessageService := privatemessageservice.New(privateMsgRepo, userRepo)
 	authService := authservice.New(userRepo)
 
-	return userService, messageService, authService
+	return userService, publicMessageService, privateMessageService, authService
 }
 
 func initConfig() (*config.Config, error) { // todo: to internals utils?
@@ -161,7 +164,7 @@ func main() {
 		fixtures.LoadFixtures(inMemDB)
 	}
 
-	userService, messageService, authService := initInMemServices(inMemDB)
+	userService, publicMessageService, privateMessageService, authService := initInMemServices(inMemDB)
 
 	valid := validator.New(validator.WithRequiredStructEnabled())
 
@@ -170,9 +173,9 @@ func main() {
 	recoveryMiddleware := middlewares.RecoveryMiddleware()
 
 	authHandler := authhandler.New(userService, authService, conf.Jwt, logger, valid)
-	userHandler := userhandler.New(userService, messageService, logger, valid, authMiddleware)
-	publicMessageHandler := publicmessagehandler.New(messageService, userService, logger, valid, authMiddleware)
-	privateMessageHandler := privatemessagehandler.New(messageService, userService, logger, valid, authMiddleware)
+	userHandler := userhandler.New(userService, privateMessageService, logger, valid, authMiddleware)
+	publicMessageHandler := publicmessagehandler.New(publicMessageService, userService, logger, valid, authMiddleware)
+	privateMessageHandler := privatemessagehandler.New(privateMessageService, userService, logger, valid, authMiddleware)
 
 	routers := make(map[string]chi.Router)
 

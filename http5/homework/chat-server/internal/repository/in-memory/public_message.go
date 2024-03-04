@@ -1,9 +1,10 @@
 // nolint
-package repository
+package in_memory
 
 import (
 	"context"
 	"errors"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 	"sort"
 	"strconv"
 	"sync"
@@ -85,12 +86,12 @@ func (pr *PublicMessageInMemRepo) GetAllPublicMessages(ctx context.Context, offs
 func (pr *PublicMessageInMemRepo) getPublicMessage(_ context.Context, id int) (*entity.PublicMessage, error) {
 	row, err := pr.DB.GetRow(PublicMessageTableName, strconv.Itoa(id))
 	if err != nil {
-		return nil, ErrNoSuchPublicMessage
+		return nil, repository.ErrNoSuchPublicMessage
 	}
 
 	msg, ok := row.(entity.PublicMessage)
 	if !ok {
-		return nil, ErrNoSuchPublicMessage
+		return nil, repository.ErrNoSuchPublicMessage
 	}
 
 	return &msg, nil

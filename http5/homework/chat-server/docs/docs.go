@@ -221,7 +221,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/messages/private/user/{user_id}": {
+        "/api/v1/messages/private/user/{from_username}": {
             "get": {
                 "security": [
                     {
@@ -255,9 +255,9 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "integer",
-                        "description": "User FromID",
-                        "name": "user_id",
+                        "type": "string",
+                        "description": "User FromUsername",
+                        "name": "from_username",
                         "in": "path",
                         "required": true
                     }
@@ -511,8 +511,8 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "content",
-                "from_id",
-                "to_id"
+                "from_username",
+                "to_username"
             ],
             "properties": {
                 "content": {
@@ -520,13 +520,13 @@ const docTemplate = `{
                     "maxLength": 2000,
                     "minLength": 1
                 },
-                "from_id": {
-                    "type": "integer",
-                    "minimum": 1
+                "from_username": {
+                    "type": "string",
+                    "minLength": 1
                 },
-                "to_id": {
-                    "type": "integer",
-                    "minimum": 1
+                "to_username": {
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         },
@@ -534,7 +534,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "content",
-                "from_id"
+                "from_username"
             ],
             "properties": {
                 "content": {
@@ -542,9 +542,9 @@ const docTemplate = `{
                     "maxLength": 2000,
                     "minLength": 1
                 },
-                "from_id": {
-                    "type": "integer",
-                    "minimum": 1
+                "from_username": {
+                    "type": "string",
+                    "minLength": 1
                 }
             }
         },

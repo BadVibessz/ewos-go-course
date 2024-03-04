@@ -1,9 +1,10 @@
 // nolint
-package repository
+package in_memory
 
 import (
 	"context"
 	"errors"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 	"math"
 	"strconv"
 	"sync"
@@ -84,12 +85,12 @@ func (ur *UserRepoInMemDB) AddUser(_ context.Context, user entity.User) (*entity
 func (ur *UserRepoInMemDB) getUserByID(_ context.Context, id int) (*entity.User, error) {
 	row, err := ur.DB.GetRow(UserTableName, strconv.Itoa(id))
 	if err != nil {
-		return nil, ErrNoSuchUser
+		return nil, repository.ErrNoSuchUser
 	}
 
 	user, ok := row.(entity.User)
 	if !ok {
-		return nil, ErrNoSuchUser
+		return nil, repository.ErrNoSuchUser
 	}
 
 	return &user, nil
@@ -105,12 +106,12 @@ func (ur *UserRepoInMemDB) GetUserByID(ctx context.Context, id int) (*entity.Use
 func (ur *UserRepoInMemDB) getUserByEmail(ctx context.Context, email string) (*entity.User, error) {
 	users := ur.getAllUsers(ctx, 0, math.MaxInt64)
 	if len(users) == 0 {
-		return nil, ErrNoSuchUser
+		return nil, repository.ErrNoSuchUser
 	}
 
 	filtered := sliceutils.Filter(users, func(u *entity.User) bool { return u.Email == email })
 	if len(filtered) == 0 {
-		return nil, ErrNoSuchUser
+		return nil, repository.ErrNoSuchUser
 	}
 
 	user := filtered[0]
@@ -128,13 +129,13 @@ func (ur *UserRepoInMemDB) GetUserByEmail(ctx context.Context, email string) (*e
 func (ur *UserRepoInMemDB) getUserByUsername(ctx context.Context, username string) (*entity.User, error) {
 	users := ur.getAllUsers(ctx, 0, math.MaxInt64)
 	if len(users) == 0 {
-		return nil, ErrNoSuchUser
+		return nil, repository.ErrNoSuchUser
 	}
 
 	filtered := sliceutils.Filter(users, func(u *entity.User) bool { return u.Username == username })
 
 	if len(filtered) == 0 {
-		return nil, ErrNoSuchUser
+		return nil, repository.ErrNoSuchUser
 	}
 
 	user := filtered[0]
@@ -159,7 +160,7 @@ func (ur *UserRepoInMemDB) DeleteUser(ctx context.Context, id int) (*entity.User
 	}
 
 	if err = ur.DB.DropRow(UserTableName, strconv.Itoa(id)); err != nil {
-		return nil, ErrNoSuchUser
+		return nil, repository.ErrNoSuchUser
 	}
 
 	return user, nil
@@ -180,7 +181,7 @@ func (ur *UserRepoInMemDB) UpdateUser(ctx context.Context, id int, updated entit
 
 	err = ur.DB.AlterRow(UserTableName, strconv.Itoa(id), updated)
 	if err != nil {
-		return nil, ErrNoSuchUser
+		return nil, repository.ErrNoSuchUser
 	}
 
 	return user, nil
@@ -192,12 +193,12 @@ func (ur *UserRepoInMemDB) CheckUniqueConstraints(ctx context.Context, email, us
 
 	got, err := ur.getUserByEmail(ctx, email)
 	if got != nil || err == nil {
-		return ErrEmailExists
+		return repository.ErrEmailExists
 	}
 
 	got, err = ur.getUserByUsername(ctx, username)
 	if got != nil || err == nil {
-		return ErrUsernameExists
+		return repository.ErrUsernameExists
 	}
 
 	return nil

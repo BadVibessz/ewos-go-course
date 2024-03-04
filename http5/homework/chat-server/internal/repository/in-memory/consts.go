@@ -1,4 +1,4 @@
-package repository
+package in_memory
 
 const (
 	PrivateMessageTableName = "private_messages"

@@ -31,8 +31,8 @@ type UserService interface {
 }
 
 type MessageService interface {
-	GetAllPrivateMessages(ctx context.Context, toID int, offset, limit int) []*entity.PrivateMessage
-	GetAllUsersThatSentMessage(ctx context.Context, toID int, offset, limit int) []*entity.User
+	GetAllPrivateMessages(ctx context.Context, toUsername string, offset, limit int) []*entity.PrivateMessage
+	GetAllUsersThatSentMessage(ctx context.Context, toUsername string, offset, limit int) []*entity.User
 }
 
 type Middleware = func(http.Handler) http.Handler
@@ -111,7 +111,7 @@ func (h *Handler) GetAll(rw http.ResponseWriter, req *http.Request) {
 //	@Failure		401	{string}	Unauthorized
 //	@Router			/api/v1/users/messages [get]
 func (h *Handler) GetAllUsersThatSentMessage(rw http.ResponseWriter, req *http.Request) {
-	id, err := handlerutils.GetIntHeaderByKey(req, "id")
+	username, err := handlerutils.GetStringHeaderByKey(req, "username")
 	if err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusUnauthorized, "", err.Error())
 		return
@@ -119,7 +119,7 @@ func (h *Handler) GetAllUsersThatSentMessage(rw http.ResponseWriter, req *http.R
 
 	paginateOpts := request.GetUnlimitedPaginationOptions()
 
-	users := h.MessageService.GetAllUsersThatSentMessage(req.Context(), id, paginateOpts.Offset, paginateOpts.Limit)
+	users := h.MessageService.GetAllUsersThatSentMessage(req.Context(), username, paginateOpts.Offset, paginateOpts.Limit)
 
 	render.JSON(rw, req, sliceutils.Map(users, mapper.MapUserToUserResponse))
 	rw.WriteHeader(http.StatusOK)

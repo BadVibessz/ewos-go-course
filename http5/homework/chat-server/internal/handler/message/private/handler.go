@@ -5,13 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-playground/validator/v10"
-	"net/http"
-	"strconv"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
+	"net/http"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"
@@ -25,11 +23,10 @@ import (
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
-type PrivateMessageService interface {
-	SendPrivateMessage(ctx context.Context, fromID, toID int, content string) (*entity.PrivateMessage, error)
-	GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error)
-	GetAllPrivateMessages(ctx context.Context, userToID int, offset, limit int) []*entity.PrivateMessage
-	GetAllPrivateMessagesFromUser(ctx context.Context, toID, fromID int, offset, limit int) ([]*entity.PrivateMessage, error)
+type MessageService interface {
+	SendPrivateMessage(ctx context.Context, msg entity.PrivateMessage) (*entity.PrivateMessage, error)
+	GetAllPrivateMessages(ctx context.Context, toUsername string, offset, limit int) []*entity.PrivateMessage
+	GetAllPrivateMessagesFromUser(ctx context.Context, toUsername, fromUsername string, offset, limit int) ([]*entity.PrivateMessage, error)
 }
 
 type UserService interface {
@@ -45,7 +42,7 @@ type UserService interface {
 type Middleware = func(http.Handler) http.Handler
 
 type Handler struct {
-	MessageService PrivateMessageService
+	MessageService MessageService
 	UserService    UserService
 	Middlewares    []Middleware
 	logger         *logrus.Logger
@@ -53,7 +50,7 @@ type Handler struct {
 }
 
 func New(
-	privateMessageService PrivateMessageService,
+	privateMessageService MessageService,
 	userService UserService,
 	logger *logrus.Logger,
 	validator *validator.Validate,
@@ -113,7 +110,7 @@ func switchByErrorAndWriteResponse(err error, rw http.ResponseWriter, logger *lo
 //	@Failure		500		{string}	internal	error
 //	@Router			/api/v1/messages/private [post]
 func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) {
-	id, err := handlerutils.GetIntHeaderByKey(req, "id")
+	username, err := handlerutils.GetStringHeaderByKey(req, "username")
 	if err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusUnauthorized, "", err.Error())
 		return
@@ -130,7 +127,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	privMsgReq.FromID = id
+	privMsgReq.FromUsername = username
 
 	if err = privMsgReq.Validate(h.validator); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating PrivateMessageRequest struct: %v", err)
@@ -141,8 +138,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	message, err := h.MessageService.SendPrivateMessage(req.Context(), privMsgReq.FromID, privMsgReq.ToID, privMsgReq.Content)
-
+	message, err := h.MessageService.SendPrivateMessage(req.Context(), mapper.MapSendPrivateMessageRequestToEntity(privMsgReq))
 	if err != nil {
 		switchByErrorAndWriteResponse(err, rw, h.logger)
 	}
@@ -165,7 +161,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 //	@Failure		401		{string}	Unauthorized
 //	@Router			/api/v1/messages/private [get]
 func (h *Handler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Request) {
-	id, err := handlerutils.GetIntHeaderByKey(req, "id")
+	username, err := handlerutils.GetStringHeaderByKey(req, "username")
 	if err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusUnauthorized, "", err.Error())
 		return
@@ -179,7 +175,7 @@ func (h *Handler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	messages := h.MessageService.GetAllPrivateMessages(req.Context(), id, paginationOpts.Offset, paginationOpts.Limit)
+	messages := h.MessageService.GetAllPrivateMessages(req.Context(), username, paginationOpts.Offset, paginationOpts.Limit)
 
 	render.JSON(rw, req, sliceutils.Map(messages, mapper.MapPrivateMessageToResponse))
 	rw.WriteHeader(http.StatusOK)
@@ -193,25 +189,25 @@ func (h *Handler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Reques
 //	@Security		JWT
 //	@Tags			Message
 //	@Produce		json
-//	@Param			offset	query	int	true	"Offset"
-//	@Param			limit	query	int	true	"Limit"
-//	@Param			user_id	path	int	true	"User FromID"
+//	@Param			offset			query	int		true	"Offset"
+//	@Param			limit			query	int		true	"Limit"
+//	@Param			from_username	path	string	true	"User FromUsername"
 //	@Para			page query int true "page"
 //	@Success		200	{object}	[]response.GetPrivateMessageResponse
 //	@Failure		401	{string}	Unauthorized
-//	@Router			/api/v1/messages/private/user/{user_id} [get]
+//	@Router			/api/v1/messages/private/user/{from_username} [get]
 func (h *Handler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, req *http.Request) {
-	id, err := handlerutils.GetIntHeaderByKey(req, "id")
+	username, err := handlerutils.GetStringHeaderByKey(req, "username")
 	if err != nil {
 		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusUnauthorized, "", err.Error())
 		return
 	}
 
-	ctx := req.Context()
+	ctx := req.Context() // TODO: method not working!
 
-	fromID, err := strconv.Atoi(chi.URLParam(req, "id"))
-	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
+	fromUsername := chi.URLParam(req, "from_username") // TODO: RECEIVE FROM USERNAME FROM BODY NOT FROM ULR PARAM
+	if fromUsername == "" {
+		rw.WriteHeader(http.StatusBadRequest) // todo: more concrete output
 		return
 	}
 
@@ -222,7 +218,7 @@ func (h *Handler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, req *htt
 		return
 	}
 
-	messages, err := h.MessageService.GetAllPrivateMessagesFromUser(ctx, id, fromID, paginationOpts.Offset, paginationOpts.Limit)
+	messages, err := h.MessageService.GetAllPrivateMessagesFromUser(ctx, username, fromUsername, paginationOpts.Offset, paginationOpts.Limit)
 	if err != nil {
 		msg := fmt.Sprintf("error occurred getting private messages from user: %v", err)
 

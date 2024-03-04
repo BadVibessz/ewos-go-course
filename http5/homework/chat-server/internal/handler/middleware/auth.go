@@ -50,6 +50,7 @@ func BasicAuthMiddleware(authService AuthService, logger *logrus.Logger, valid *
 			}
 
 			req.Header.Set("id", strconv.Itoa(user.ID))
+			req.Header.Set("username", user.Username)
 
 			next.ServeHTTP(rw, req)
 		})
@@ -77,6 +78,7 @@ func JWTAuthMiddleware(secret string, logger *logrus.Logger) Handler {
 				return
 			}
 
+			// todo: to private func
 			idAny, exists := payload["id"]
 			if !exists {
 				msg := "invalid payload: not contains id"
@@ -93,7 +95,25 @@ func JWTAuthMiddleware(secret string, logger *logrus.Logger) Handler {
 				return
 			}
 
+			usernameAny, exists := payload["username"]
+			if !exists {
+				msg := "invalid payload: not contains username"
+
+				handlerutils.WriteErrResponseAndLog(rw, logger, http.StatusUnauthorized, msg, msg)
+				return
+			}
+
+			username, ok := usernameAny.(string)
+			if !ok {
+				msg := "cannot parse username from payload to string"
+
+				handlerutils.WriteErrResponseAndLog(rw, logger, http.StatusUnauthorized, msg, msg)
+				return
+			}
+
 			req.Header.Set("id", strconv.Itoa(int(id)))
+			req.Header.Set("username", username)
+
 			next.ServeHTTP(rw, req)
 		})
 	}
