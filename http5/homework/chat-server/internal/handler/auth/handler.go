@@ -138,8 +138,6 @@ func (h *Handler) Register(rw http.ResponseWriter, req *http.Request) {
 func (h *Handler) Login(rw http.ResponseWriter, req *http.Request) {
 	var loginReq request.LoginRequest
 
-	panic("DURA!")
-
 	if err := render.DecodeJSON(req.Body, &loginReq); err != nil {
 		logMsg := fmt.Sprintf("error occurred decoding request body to LoginRequest struct: %v", err)
 		respMsg := fmt.Sprintf("invalid login data provided: %v", err)

@@ -4,7 +4,7 @@ import "time"
 
 type PublicMessage struct {
 	ID       int
-	From     *User
+	From     *User // TODO: CHANGE TO FromID
 	Content  string
 	SentAt   time.Time
 	EditedAt time.Time

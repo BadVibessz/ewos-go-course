@@ -3,12 +3,10 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 
-	chimiddleware "github.com/go-chi/chi/v5/middleware"
-
+	myhttp "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/http"
 	log "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/logger"
 )
 
@@ -25,17 +23,33 @@ func wrapRequestWithLogger(req *http.Request, logger log.Logger) *http.Request {
 	return req.WithContext(context.WithValue(req.Context(), LogEntryCtxKey, logger))
 }
 
-func LoggingMiddleware(logger log.Logger, level logrus.Level) Handler {
+func LoggingMiddleware(logger log.Logger, level log.Level) Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			ww := chimiddleware.NewWrapResponseWriter(rw, req.ProtoMajor)
+			ww := myhttp.NewBasicResponseWrapper(rw)
+
+			logLev := logger.GetLevel()
+			if logLev != level {
+				logger.SetLevel(level)
+			}
 
 			t1 := time.Now()
-			defer func() { // todo: enhance
-				msg := fmt.Sprintf("URL: %s, Satus: %v Bytes Written: %v Header: %s Elapsed time: %s",
-					req.URL, ww.Status(), ww.BytesWritten(), ww.Header(), time.Since(t1))
+			defer func() {
+				// todo: colorful output?
 
-				logger.Logf(logrus.InfoLevel, msg)
+				msg := fmt.Sprintf("URL: %s\nSatus: %v\nBytes Written: %v\nResponse: %v\nElapsed time: %s\n",
+					req.URL, ww.Status(), ww.BytesWritten(), ww.Response(), time.Since(t1))
+
+				if ww.Status() >= 400 {
+					logger.Logf(log.ErrorLevel, msg)
+				} else {
+					logger.Logf(log.InfoLevel, msg)
+				}
+
+				// todo: needed?
+				if logger.GetLevel() != logLev {
+					logger.SetLevel(logLev)
+				}
 			}()
 
 			next.ServeHTTP(ww, wrapRequestWithLogger(req, logger))

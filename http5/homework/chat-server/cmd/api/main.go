@@ -157,7 +157,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	inMemDB, savedChan := initDB(ctx)
-	if loadFixtures {
+	if loadFixtures { // todo: to config
 		fixtures.LoadFixtures(inMemDB)
 	}
 
