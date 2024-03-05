@@ -28,6 +28,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/leodido/go-urn v1.3.0 // indirect

@@ -7,7 +7,7 @@ CREATE TABLE users
     username        varchar(128) not null unique,
     hashed_password text         not null,
     created_at      timestamp    not null,
-    edited_at       timestamp    not null
+    updated_at       timestamp    not null
 );
 -- +goose StatementEnd
 
