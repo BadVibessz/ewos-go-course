@@ -1,32 +1,36 @@
-// nolint
 package postgres
 
 import (
 	"context"
 	"fmt"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
-	"github.com/jmoiron/sqlx"
-	"sync"
+	"math"
 	"time"
+
+	"github.com/jmoiron/sqlx"
+
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 )
 
-type UserPostgresRepo struct {
-	mutex sync.RWMutex
-	DB    *sqlx.DB
+type UserRepo struct {
+	DB *sqlx.DB
 }
 
-func New(db *sqlx.DB) *UserPostgresRepo {
-	return &UserPostgresRepo{
-		DB:    db,
-		mutex: sync.RWMutex{},
+func NewUserRepo(db *sqlx.DB) *UserRepo {
+	return &UserRepo{
+		DB: db,
 	}
 }
 
-// todo: test
-func (ur *UserPostgresRepo) GetAllUsers(ctx context.Context, offset, limit int) []*entity.User {
-	// todo: listen for context?
+func (ur *UserRepo) GetAllUsers(ctx context.Context, offset, limit int) []*entity.User {
+	var query string
 
-	rows, err := ur.DB.QueryxContext(ctx, "SELECT * FROM users ORDER BY created_at LIMIT $1 OFFSET $2", limit, offset)
+	if limit == math.MaxInt64 {
+		query = fmt.Sprintf("SELECT * FROM users ORDER BY created_at OFFSET %v", offset)
+	} else {
+		query = fmt.Sprintf("SELECT * FROM users ORDER BY created_at LIMIT %v OFFSET %v", limit, offset)
+	}
+
+	rows, err := ur.DB.QueryxContext(ctx, query)
 	if err != nil {
 		return nil // todo: return err?
 	}
@@ -49,7 +53,7 @@ func (ur *UserPostgresRepo) GetAllUsers(ctx context.Context, offset, limit int) 
 	return users
 }
 
-func (ur *UserPostgresRepo) AddUser(ctx context.Context, user entity.User) (*entity.User, error) {
+func (ur *UserRepo) AddUser(ctx context.Context, user entity.User) (*entity.User, error) {
 	now := time.Now()
 
 	user.CreatedAt = now
@@ -72,7 +76,7 @@ func (ur *UserPostgresRepo) AddUser(ctx context.Context, user entity.User) (*ent
 	return &user, nil
 }
 
-func (ur *UserPostgresRepo) getUserByArg(ctx context.Context, argName string, arg any) (*entity.User, error) {
+func (ur *UserRepo) getUserByArg(ctx context.Context, argName string, arg any) (*entity.User, error) {
 	row := ur.DB.QueryRowxContext(ctx, "SELECT * FROM users WHERE $1 = $2", argName, arg)
 	if err := row.Err(); err != nil {
 		return nil, err
@@ -88,19 +92,19 @@ func (ur *UserPostgresRepo) getUserByArg(ctx context.Context, argName string, ar
 	return &user, nil
 }
 
-func (ur *UserPostgresRepo) GetUserByID(ctx context.Context, id int) (*entity.User, error) {
+func (ur *UserRepo) GetUserByID(ctx context.Context, id int) (*entity.User, error) {
 	return ur.getUserByArg(ctx, "id", id)
 }
 
-func (ur *UserPostgresRepo) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (ur *UserRepo) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
 	return ur.getUserByArg(ctx, "email", email)
 }
 
-func (ur *UserPostgresRepo) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+func (ur *UserRepo) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
 	return ur.getUserByArg(ctx, "username", username)
 }
 
-func (ur *UserPostgresRepo) DeleteUser(ctx context.Context, id int) (*entity.User, error) {
+func (ur *UserRepo) DeleteUser(ctx context.Context, id int) (*entity.User, error) {
 	row := ur.DB.QueryRowxContext(ctx, "DELETE FROM users WHERE id = $1", id)
 	if err := row.Err(); err != nil {
 		return nil, err
@@ -116,7 +120,7 @@ func (ur *UserPostgresRepo) DeleteUser(ctx context.Context, id int) (*entity.Use
 	return &user, nil
 }
 
-func (ur *UserPostgresRepo) UpdateUser(ctx context.Context, id int, updated entity.User) (*entity.User, error) {
+func (ur *UserRepo) UpdateUser(ctx context.Context, id int, updated entity.User) (*entity.User, error) {
 	updated.UpdatedAt = time.Now()
 
 	tx := ur.DB.MustBegin()
@@ -128,7 +132,6 @@ func (ur *UserPostgresRepo) UpdateUser(ctx context.Context, id int, updated enti
 		return nil, err
 	}
 
-	// todo: THIS PIECE OF CODE TO PRIVATE METHOD AS THIS PIECE MEETS OFTEN
 	row := tx.QueryRowxContext(ctx, "SELECT * FROM users WHERE id = $1", id)
 	if err = row.Err(); err != nil {
 		return nil, err
@@ -136,7 +139,7 @@ func (ur *UserPostgresRepo) UpdateUser(ctx context.Context, id int, updated enti
 
 	if err = tx.Commit(); err != nil {
 		return nil, err
-	}
+	} // todo: maybe tx.Commit() or tx.Rollback() inside defer func?
 
 	var user entity.User
 

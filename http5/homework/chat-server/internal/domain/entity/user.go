@@ -11,6 +11,4 @@ type User struct {
 	UpdatedAt      time.Time `db:"updated_at"`
 }
 
-func (u *User) Equal(other User) bool {
-	return u.Username == other.Username
-}
+func (u *User) Equal(other User) bool { return u.Username == other.Username }

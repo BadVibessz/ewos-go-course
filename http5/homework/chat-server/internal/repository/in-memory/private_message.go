@@ -4,13 +4,13 @@ package in_memory
 import (
 	"context"
 	"errors"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 	"sort"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 )

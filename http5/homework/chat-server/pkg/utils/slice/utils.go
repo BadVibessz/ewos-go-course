@@ -58,3 +58,17 @@ func ContainsValue[T comparable](ss []*T, v T) bool {
 
 	return false
 }
+
+func PointerAndValueSlicesEqual[T comparable](p []*T, v []T) bool {
+	if len(p) != len(v) {
+		return false
+	}
+
+	for i := range p {
+		if *p[i] != v[i] {
+			return false
+		}
+	}
+
+	return true
+}
