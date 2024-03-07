@@ -2,18 +2,20 @@ package postgres
 
 import (
 	"context"
-	"database/sql/driver"
 	"errors"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
-	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 	"math"
 	"regexp"
 	"testing"
 	"time"
 
+	"database/sql/driver"
 	"github.com/stretchr/testify/assert"
 
 	sqlxmock "github.com/zhashkevych/go-sqlxmock"
+
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+
+	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
 func timesAlmostEqual(tim1, tim2 time.Time) bool {
@@ -42,11 +44,7 @@ func TestUserRepo_AddUser(t *testing.T) {
 		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
 	}
 
-	defer func() { // TODO: WHY ERROR
-		if err = db.Close(); err != nil {
-			t.Fatalf("an error '%v' was not expected when closing a stub database connection", err)
-		}
-	}()
+	defer db.Close()
 
 	repo := NewUserRepo(db)
 
@@ -142,11 +140,7 @@ func TestUserRepo_GetAll(t *testing.T) {
 		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
 	}
 
-	defer func() { // TODO: WHY ERROR
-		if err = db.Close(); err != nil {
-			t.Fatalf("an error '%v' was not expected when closing a stub database connection", err)
-		}
-	}()
+	defer db.Close()
 
 	repo := NewUserRepo(db)
 
@@ -290,3 +284,309 @@ func TestUserRepo_GetAll(t *testing.T) {
 		})
 	}
 }
+
+func TestUserRepo_GetByID(t *testing.T) {
+	db, mock, err := sqlxmock.Newx()
+	if err != nil {
+		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
+	}
+
+	defer db.Close()
+
+	repo := NewUserRepo(db)
+
+	type outputArg = entity.User
+	type inputArg = int
+
+	tests := []struct {
+		name          string
+		mockBehaviour func()
+		input         inputArg
+		want          outputArg
+		wantErr       bool
+	}{
+		{
+			name: "ok, valid id",
+			mockBehaviour: func() {
+				rows := sqlxmock.
+					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"}).
+					AddRow(1, "username", "email@mail.com", "hashed_password", time.Time{}, time.Time{})
+
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM users WHERE $1 = $2`)).
+					WithArgs("id", 1).
+					WillReturnRows(rows)
+			},
+			input: 1,
+			want: entity.User{
+				ID:             1,
+				Username:       "username",
+				Email:          "email@mail.com",
+				HashedPassword: "hashed_password",
+				CreatedAt:      time.Time{},
+				UpdatedAt:      time.Time{},
+			},
+		},
+		{
+			name: "err, invalid id",
+			mockBehaviour: func() {
+				rows := sqlxmock.
+					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"})
+
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM users WHERE $1 = $2`)).
+					WithArgs("id", 2).
+					WillReturnRows(rows)
+			},
+			input:   2,
+			wantErr: true,
+		},
+	}
+
+	ctx := context.Background()
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.mockBehaviour()
+
+			got, err := repo.GetUserByID(ctx, test.input)
+
+			if test.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.want, *got)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestUserRepo_GetByUsername(t *testing.T) {
+	db, mock, err := sqlxmock.Newx()
+	if err != nil {
+		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
+	}
+
+	defer db.Close()
+
+	repo := NewUserRepo(db)
+
+	type outputArg = entity.User
+	type inputArg = string
+
+	tests := []struct {
+		name          string
+		mockBehaviour func()
+		input         inputArg
+		want          outputArg
+		wantErr       bool
+	}{
+		{
+			name: "ok, valid username",
+			mockBehaviour: func() {
+				rows := sqlxmock.
+					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"}).
+					AddRow(1, "username", "email@mail.com", "hashed_password", time.Time{}, time.Time{})
+
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM users WHERE $1 = $2`)).
+					WithArgs("username", "username").
+					WillReturnRows(rows)
+			},
+			input: "username",
+			want: entity.User{
+				ID:             1,
+				Username:       "username",
+				Email:          "email@mail.com",
+				HashedPassword: "hashed_password",
+				CreatedAt:      time.Time{},
+				UpdatedAt:      time.Time{},
+			},
+		},
+		{
+			name: "err, invalid username",
+			mockBehaviour: func() {
+				rows := sqlxmock.
+					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"})
+
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM users WHERE $1 = $2`)).
+					WithArgs("username", "not_presented").
+					WillReturnRows(rows)
+			},
+			input:   "not_presented",
+			wantErr: true,
+		},
+	}
+
+	ctx := context.Background()
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.mockBehaviour()
+
+			got, err := repo.GetUserByUsername(ctx, test.input)
+
+			if test.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.want, *got)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestUserRepo_GetByEmail(t *testing.T) {
+	db, mock, err := sqlxmock.Newx()
+	if err != nil {
+		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
+	}
+
+	defer db.Close()
+
+	repo := NewUserRepo(db)
+
+	type outputArg = entity.User
+	type inputArg = string
+
+	tests := []struct {
+		name          string
+		mockBehaviour func()
+		input         inputArg
+		want          outputArg
+		wantErr       bool
+	}{
+		{
+			name: "ok, valid email",
+			mockBehaviour: func() {
+				rows := sqlxmock.
+					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"}).
+					AddRow(1, "username", "email@mail.com", "hashed_password", time.Time{}, time.Time{})
+
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM users WHERE $1 = $2`)).
+					WithArgs("email", "email@mail.com").
+					WillReturnRows(rows)
+			},
+			input: "email@mail.com",
+			want: entity.User{
+				ID:             1,
+				Username:       "username",
+				Email:          "email@mail.com",
+				HashedPassword: "hashed_password",
+				CreatedAt:      time.Time{},
+				UpdatedAt:      time.Time{},
+			},
+		},
+		{
+			name: "err, invalid email",
+			mockBehaviour: func() {
+				rows := sqlxmock.
+					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"})
+
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM users WHERE $1 = $2`)).
+					WithArgs("email", "not_presented@mail.com").
+					WillReturnRows(rows)
+			},
+			input:   "not_presented@mail.com",
+			wantErr: true,
+		},
+	}
+
+	ctx := context.Background()
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.mockBehaviour()
+
+			got, err := repo.GetUserByEmail(ctx, test.input)
+
+			if test.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.want, *got)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestUserRepo_Delete(t *testing.T) {
+	db, mock, err := sqlxmock.Newx()
+	if err != nil {
+		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
+	}
+
+	defer db.Close()
+
+	repo := NewUserRepo(db)
+
+	type outputArg = entity.User
+	type inputArg = int
+
+	tests := []struct {
+		name          string
+		mockBehaviour func()
+		input         inputArg
+		want          outputArg
+		wantErr       bool
+	}{
+		{
+			name: "ok, valid id",
+			mockBehaviour: func() {
+				rows := sqlxmock.
+					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"}).
+					AddRow(1, "username", "email@mail.com", "hashed_password", time.Time{}, time.Time{})
+
+				mock.ExpectQuery(regexp.QuoteMeta(`DELETE FROM users WHERE id = $1`)).
+					WithArgs(1).
+					WillReturnRows(rows)
+			},
+			input: 1,
+			want: entity.User{
+				ID:             1,
+				Username:       "username",
+				Email:          "email@mail.com",
+				HashedPassword: "hashed_password",
+				CreatedAt:      time.Time{},
+				UpdatedAt:      time.Time{},
+			},
+		},
+		{
+			name: "err, invalid id",
+			mockBehaviour: func() {
+				rows := sqlxmock.
+					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"})
+
+				mock.ExpectQuery(regexp.QuoteMeta(`DELETE FROM users WHERE id = $1`)).
+					WithArgs(1).
+					WillReturnRows(rows)
+			},
+			input:   1,
+			wantErr: true,
+		},
+	}
+
+	ctx := context.Background()
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.mockBehaviour()
+
+			got, err := repo.DeleteUser(ctx, test.input)
+
+			if test.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.want, *got)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+// TODO: TEST repo.UpdateUser
