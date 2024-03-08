@@ -147,8 +147,7 @@ func (db *InMemDB) AddRow(table string, identifier string, row any) error {
 		return err
 	}
 
-	_, exists := t.Get(identifier)
-	if exists {
+	if _, exists := t.Get(identifier); exists {
 		return ErrExistingKey
 	}
 
