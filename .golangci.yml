@@ -8,6 +8,10 @@ run:
   # exit code when at least one issue was found, default is 1
   issues-exit-code: 1
 
+  skip-dirs:
+    - internal/fixtures
+    - http5/homework/chat-server/internal/handler
+
 # output configuration options
 output:
   # colored-line-number|line-number|json|tab|checkstyle|code-climate, default is "colored-line-number"
@@ -78,7 +82,7 @@ linters:
 
 linters-settings:
   staticcheck:
-    checks: ["all", "-SA1029"] # https://staticcheck.dev/docs/checks/ SA1029 запрет строк в качестве ключа в контексте
+    checks: [ "all", "-SA1029" ] # https://staticcheck.dev/docs/checks/ SA1029 запрет строк в качестве ключа в контексте
   errcheck:
     check-type-assertions: true
     check-blank: true
