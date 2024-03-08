@@ -152,6 +152,7 @@ func (db *InMemDB) AddRow(table string, identifier string, row any) error {
 	}
 
 	t.Set(identifier, row)
+
 	db.counters[table]++
 
 	return nil
