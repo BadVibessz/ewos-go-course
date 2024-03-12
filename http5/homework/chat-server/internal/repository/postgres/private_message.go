@@ -42,7 +42,7 @@ func (pr *PrivateMessageRepo) AddPrivateMessage(ctx context.Context, msg entity.
 	return &msg, nil
 }
 
-func (pr *PrivateMessageRepo) GetAllPublicMessages(ctx context.Context, offset, limit int) []*entity.PrivateMessage {
+func (pr *PrivateMessageRepo) GetAllPrivateMessages(ctx context.Context, offset, limit int) []*entity.PrivateMessage {
 	rows, err := pr.DB.QueryxContext(ctx, "SELECT * FROM private_message ORDER BY sent_at LIMIT $1 OFFSET $2", limit, offset)
 	if err != nil {
 		return nil
@@ -64,7 +64,7 @@ func (pr *PrivateMessageRepo) GetAllPublicMessages(ctx context.Context, offset, 
 	return users
 }
 
-func (pr *PrivateMessageRepo) GetPublicMessage(ctx context.Context, id int) (*entity.PrivateMessage, error) {
+func (pr *PrivateMessageRepo) GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error) {
 	row := pr.DB.QueryRowxContext(ctx, "SELECT * FROM private_message WHERE id = $1", id)
 	if err := row.Err(); err != nil {
 		return nil, err

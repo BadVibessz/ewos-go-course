@@ -16,13 +16,13 @@ import (
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
-type UserRepoInMemDB struct {
+type UserRepo struct {
 	mutex sync.RWMutex
 	DB    inmemory.InMemoryDB
 }
 
-func NewInMemUserRepo(db inmemory.InMemoryDB) *UserRepoInMemDB {
-	repo := UserRepoInMemDB{
+func NewUserRepo(db inmemory.InMemoryDB) *UserRepo {
+	repo := UserRepo{
 		DB:    db,
 		mutex: sync.RWMutex{},
 	}
@@ -35,7 +35,7 @@ func NewInMemUserRepo(db inmemory.InMemoryDB) *UserRepoInMemDB {
 	return &repo
 }
 
-func (ur *UserRepoInMemDB) getAllUsers(_ context.Context, offset, limit int) []*entity.User {
+func (ur *UserRepo) getAllUsers(_ context.Context, offset, limit int) []*entity.User {
 	rows, err := ur.DB.GetAllRows(UserTableName, offset, limit)
 	if err != nil {
 		return nil
@@ -53,14 +53,14 @@ func (ur *UserRepoInMemDB) getAllUsers(_ context.Context, offset, limit int) []*
 	return res
 }
 
-func (ur *UserRepoInMemDB) GetAllUsers(ctx context.Context, offset, limit int) []*entity.User {
+func (ur *UserRepo) GetAllUsers(ctx context.Context, offset, limit int) []*entity.User {
 	ur.mutex.RLock()
 	defer ur.mutex.RUnlock()
 
 	return ur.getAllUsers(ctx, offset, limit)
 }
 
-func (ur *UserRepoInMemDB) AddUser(_ context.Context, user entity.User) (*entity.User, error) {
+func (ur *UserRepo) AddUser(_ context.Context, user entity.User) (*entity.User, error) {
 	ur.mutex.Lock()
 	defer ur.mutex.Unlock()
 
@@ -82,7 +82,7 @@ func (ur *UserRepoInMemDB) AddUser(_ context.Context, user entity.User) (*entity
 	return &user, nil
 }
 
-func (ur *UserRepoInMemDB) getUserByID(_ context.Context, id int) (*entity.User, error) {
+func (ur *UserRepo) getUserByID(_ context.Context, id int) (*entity.User, error) {
 	row, err := ur.DB.GetRow(UserTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, repository.ErrNoSuchUser
@@ -96,14 +96,14 @@ func (ur *UserRepoInMemDB) getUserByID(_ context.Context, id int) (*entity.User,
 	return &user, nil
 }
 
-func (ur *UserRepoInMemDB) GetUserByID(ctx context.Context, id int) (*entity.User, error) {
+func (ur *UserRepo) GetUserByID(ctx context.Context, id int) (*entity.User, error) {
 	ur.mutex.RLock()
 	defer ur.mutex.RUnlock()
 
 	return ur.getUserByID(ctx, id)
 }
 
-func (ur *UserRepoInMemDB) getUserByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (ur *UserRepo) getUserByEmail(ctx context.Context, email string) (*entity.User, error) {
 	users := ur.getAllUsers(ctx, 0, math.MaxInt64)
 	if len(users) == 0 {
 		return nil, repository.ErrNoSuchUser
@@ -119,14 +119,14 @@ func (ur *UserRepoInMemDB) getUserByEmail(ctx context.Context, email string) (*e
 	return user, nil
 }
 
-func (ur *UserRepoInMemDB) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
+func (ur *UserRepo) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
 	ur.mutex.RLock()
 	defer ur.mutex.RUnlock()
 
 	return ur.getUserByEmail(ctx, email)
 }
 
-func (ur *UserRepoInMemDB) getUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+func (ur *UserRepo) getUserByUsername(ctx context.Context, username string) (*entity.User, error) {
 	users := ur.getAllUsers(ctx, 0, math.MaxInt64)
 	if len(users) == 0 {
 		return nil, repository.ErrNoSuchUser
@@ -143,14 +143,14 @@ func (ur *UserRepoInMemDB) getUserByUsername(ctx context.Context, username strin
 	return user, nil
 }
 
-func (ur *UserRepoInMemDB) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+func (ur *UserRepo) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
 	ur.mutex.RLock()
 	defer ur.mutex.RUnlock()
 
 	return ur.getUserByUsername(ctx, username)
 }
 
-func (ur *UserRepoInMemDB) DeleteUser(ctx context.Context, id int) (*entity.User, error) {
+func (ur *UserRepo) DeleteUser(ctx context.Context, id int) (*entity.User, error) {
 	ur.mutex.Lock()
 	defer ur.mutex.Unlock()
 
@@ -166,7 +166,7 @@ func (ur *UserRepoInMemDB) DeleteUser(ctx context.Context, id int) (*entity.User
 	return user, nil
 }
 
-func (ur *UserRepoInMemDB) UpdateUser(ctx context.Context, id int, updated entity.User) (*entity.User, error) {
+func (ur *UserRepo) UpdateUser(ctx context.Context, id int, updated entity.User) (*entity.User, error) {
 	ur.mutex.Lock()
 	defer ur.mutex.Unlock()
 
@@ -187,7 +187,7 @@ func (ur *UserRepoInMemDB) UpdateUser(ctx context.Context, id int, updated entit
 	return user, nil
 }
 
-func (ur *UserRepoInMemDB) CheckUniqueConstraints(ctx context.Context, email, username string) error {
+func (ur *UserRepo) CheckUniqueConstraints(ctx context.Context, email, username string) error {
 	ur.mutex.RLock()
 	defer ur.mutex.RUnlock()
 

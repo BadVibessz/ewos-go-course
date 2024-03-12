@@ -12,10 +12,10 @@ import (
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
-func initRepo(ctx context.Context) *in_memory.UserRepoInMemDB {
+func initRepo(ctx context.Context) *in_memory.UserRepo {
 	db, _ := inmemory.NewInMemDB(ctx, "")
 
-	return in_memory.NewInMemUserRepo(db)
+	return in_memory.NewUserRepo(db)
 }
 
 func isEqualCreateModelToUser(createModel *entity.User, user *entity.User) bool {

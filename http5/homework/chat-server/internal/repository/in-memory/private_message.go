@@ -15,13 +15,13 @@ import (
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 )
 
-type PrivateMessageInMemRepo struct {
+type PrivateMessageRepo struct {
 	DB    inmemory.InMemoryDB
 	mutex sync.RWMutex
 }
 
-func NewInMemPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageInMemRepo {
-	repo := PrivateMessageInMemRepo{
+func NewPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageRepo {
+	repo := PrivateMessageRepo{
 		DB:    db,
 		mutex: sync.RWMutex{},
 	}
@@ -34,7 +34,7 @@ func NewInMemPrivateMessageRepo(db inmemory.InMemoryDB) *PrivateMessageInMemRepo
 	return &repo
 }
 
-func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg entity.PrivateMessage) (*entity.PrivateMessage, error) {
+func (pr *PrivateMessageRepo) AddPrivateMessage(_ context.Context, msg entity.PrivateMessage) (*entity.PrivateMessage, error) {
 	pr.mutex.Lock()
 	defer pr.mutex.Unlock()
 
@@ -56,7 +56,7 @@ func (pr *PrivateMessageInMemRepo) AddPrivateMessage(_ context.Context, msg enti
 	return &msg, nil
 }
 
-func (pr *PrivateMessageInMemRepo) getAllPrivateMessages(_ context.Context, offset, limit int) []*entity.PrivateMessage {
+func (pr *PrivateMessageRepo) getAllPrivateMessages(_ context.Context, offset, limit int) []*entity.PrivateMessage {
 	rows, err := pr.DB.GetAllRows(PrivateMessageTableName, offset, limit)
 	if err != nil {
 		return nil
@@ -76,14 +76,14 @@ func (pr *PrivateMessageInMemRepo) getAllPrivateMessages(_ context.Context, offs
 	return res
 }
 
-func (pr *PrivateMessageInMemRepo) GetAllPrivateMessages(ctx context.Context, offset, limit int) []*entity.PrivateMessage {
+func (pr *PrivateMessageRepo) GetAllPrivateMessages(ctx context.Context, offset, limit int) []*entity.PrivateMessage {
 	pr.mutex.RLock()
 	defer pr.mutex.RUnlock()
 
 	return pr.getAllPrivateMessages(ctx, offset, limit)
 }
 
-func (pr *PrivateMessageInMemRepo) getPrivateMessage(_ context.Context, id int) (*entity.PrivateMessage, error) {
+func (pr *PrivateMessageRepo) getPrivateMessage(_ context.Context, id int) (*entity.PrivateMessage, error) {
 	row, err := pr.DB.GetRow(PrivateMessageTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, repository.ErrNoSuchPrivateMessage
@@ -97,7 +97,7 @@ func (pr *PrivateMessageInMemRepo) getPrivateMessage(_ context.Context, id int) 
 	return &msg, nil
 }
 
-func (pr *PrivateMessageInMemRepo) GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error) {
+func (pr *PrivateMessageRepo) GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error) {
 	pr.mutex.RLock()
 	defer pr.mutex.RUnlock()
 

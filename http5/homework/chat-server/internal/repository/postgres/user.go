@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 	"math"
 	"time"
 
@@ -59,21 +60,22 @@ func (ur *UserRepo) AddUser(ctx context.Context, user entity.User) (*entity.User
 	user.CreatedAt = now
 	user.UpdatedAt = now
 
-	result, err := ur.DB.NamedExecContext(ctx,
+	result, err := ur.DB.NamedQueryContext(ctx,
 		"INSERT INTO users (email, username, hashed_password, created_at, updated_at) VALUES (:email, :username, :hashed_password, :created_at, :updated_at)",
 		&user)
 	if err != nil {
 		return nil, err
 	}
 
-	id, err := result.LastInsertId()
+	var usr entity.User
+
+	result.Next() // todo:!!!!!!!!
+	err = result.StructScan(&usr)
 	if err != nil {
 		return nil, err
 	}
 
-	user.ID = int(id)
-
-	return &user, nil
+	return &usr, nil
 }
 
 func (ur *UserRepo) getUserByArg(ctx context.Context, argName string, arg any) (*entity.User, error) {
@@ -149,4 +151,18 @@ func (ur *UserRepo) UpdateUser(ctx context.Context, id int, updated entity.User)
 	}
 
 	return &user, nil
+}
+
+func (ur *UserRepo) CheckUniqueConstraints(ctx context.Context, email, username string) error {
+	got, err := ur.GetUserByEmail(ctx, email)
+	if got != nil || err == nil {
+		return repository.ErrEmailExists
+	}
+
+	got, err = ur.GetUserByUsername(ctx, username)
+	if got != nil || err == nil {
+		return repository.ErrUsernameExists
+	}
+
+	return nil
 }

@@ -15,13 +15,13 @@ import (
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 )
 
-type PublicMessageInMemRepo struct {
+type PublicMessageRepo struct {
 	DB    inmemory.InMemoryDB
 	mutex sync.RWMutex
 }
 
-func NewInMemPublicMessageRepo(db inmemory.InMemoryDB) *PublicMessageInMemRepo {
-	repo := PublicMessageInMemRepo{
+func NewPublicMessageRepo(db inmemory.InMemoryDB) *PublicMessageRepo {
+	repo := PublicMessageRepo{
 		DB:    db,
 		mutex: sync.RWMutex{},
 	}
@@ -34,7 +34,7 @@ func NewInMemPublicMessageRepo(db inmemory.InMemoryDB) *PublicMessageInMemRepo {
 	return &repo
 }
 
-func (pr *PublicMessageInMemRepo) AddPublicMessage(_ context.Context, msg entity.PublicMessage) (*entity.PublicMessage, error) {
+func (pr *PublicMessageRepo) AddPublicMessage(_ context.Context, msg entity.PublicMessage) (*entity.PublicMessage, error) {
 	pr.mutex.Lock()
 	defer pr.mutex.Unlock()
 
@@ -56,7 +56,7 @@ func (pr *PublicMessageInMemRepo) AddPublicMessage(_ context.Context, msg entity
 	return &msg, nil
 }
 
-func (pr *PublicMessageInMemRepo) getAllPublicMessages(_ context.Context, offset, limit int) []*entity.PublicMessage {
+func (pr *PublicMessageRepo) getAllPublicMessages(_ context.Context, offset, limit int) []*entity.PublicMessage {
 	rows, err := pr.DB.GetAllRows(PublicMessageTableName, offset, limit)
 	if err != nil {
 		return nil
@@ -76,14 +76,14 @@ func (pr *PublicMessageInMemRepo) getAllPublicMessages(_ context.Context, offset
 	return res
 }
 
-func (pr *PublicMessageInMemRepo) GetAllPublicMessages(ctx context.Context, offset, limit int) []*entity.PublicMessage {
+func (pr *PublicMessageRepo) GetAllPublicMessages(ctx context.Context, offset, limit int) []*entity.PublicMessage {
 	pr.mutex.RLock()
 	defer pr.mutex.RUnlock()
 
 	return pr.getAllPublicMessages(ctx, offset, limit)
 }
 
-func (pr *PublicMessageInMemRepo) getPublicMessage(_ context.Context, id int) (*entity.PublicMessage, error) {
+func (pr *PublicMessageRepo) getPublicMessage(_ context.Context, id int) (*entity.PublicMessage, error) {
 	row, err := pr.DB.GetRow(PublicMessageTableName, strconv.Itoa(id))
 	if err != nil {
 		return nil, repository.ErrNoSuchPublicMessage
@@ -97,7 +97,7 @@ func (pr *PublicMessageInMemRepo) getPublicMessage(_ context.Context, id int) (*
 	return &msg, nil
 }
 
-func (pr *PublicMessageInMemRepo) GetPublicMessage(ctx context.Context, id int) (*entity.PublicMessage, error) {
+func (pr *PublicMessageRepo) GetPublicMessage(ctx context.Context, id int) (*entity.PublicMessage, error) {
 	pr.mutex.RLock()
 	defer pr.mutex.RUnlock()
 

@@ -2,12 +2,9 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/config"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository/in-memory"
-	"github.com/joho/godotenv"
-	"github.com/spf13/viper"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,8 +14,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/config"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/fixtures"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/router"
 
@@ -34,11 +36,15 @@ import (
 	publicmessageservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message/public"
 	userservice "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/user"
 
+	inmemoryrepository "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository/in-memory"
+	postgresrepo "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository/postgres"
+
 	inmemory "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/db/in-memory"
 
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/docs"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 //	@title			Chat API
@@ -59,6 +65,29 @@ const ( // todo: config file
 	port         = 5000
 	loadFixtures = true
 )
+
+type UserRepo interface {
+	AddUser(ctx context.Context, user entity.User) (*entity.User, error)
+	GetUserByID(ctx context.Context, id int) (*entity.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
+	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
+	GetAllUsers(ctx context.Context, offset, limit int) []*entity.User
+	DeleteUser(ctx context.Context, id int) (*entity.User, error)
+	UpdateUser(ctx context.Context, id int, updateModel entity.User) (*entity.User, error)
+	CheckUniqueConstraints(ctx context.Context, email, username string) error
+}
+
+type PublicMessageRepo interface {
+	AddPublicMessage(ctx context.Context, msg entity.PublicMessage) (*entity.PublicMessage, error)
+	GetAllPublicMessages(ctx context.Context, offset, limit int) []*entity.PublicMessage
+	GetPublicMessage(ctx context.Context, id int) (*entity.PublicMessage, error)
+}
+
+type PrivateMessageRepo interface {
+	AddPrivateMessage(ctx context.Context, msg entity.PrivateMessage) (*entity.PrivateMessage, error)
+	GetAllPrivateMessages(ctx context.Context, offset, limit int) []*entity.PrivateMessage
+	GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error)
+}
 
 func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	var inMemDB *inmemory.InMemDB
@@ -84,17 +113,40 @@ func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	return inMemDB, savedChan
 }
 
-func initInMemServices(db inmemory.InMemoryDB) (*userservice.Service, *publicmessageservice.Service, *privatemessageservice.Service, *authservice.Service) {
-	userRepo := in_memory.NewInMemUserRepo(db)
-	privateMsgRepo := in_memory.NewInMemPrivateMessageRepo(db)
-	publicMsgRepo := in_memory.NewInMemPublicMessageRepo(db)
+func initInMemRepos(ctx context.Context, conf *config.Config, savedChan *<-chan any) (*inmemoryrepository.UserRepo, *inmemoryrepository.PublicMessageRepo, *inmemoryrepository.PrivateMessageRepo) {
+	db, ch := initDB(ctx)
 
-	userService := userservice.New(userRepo)
-	publicMessageService := publicmessageservice.New(publicMsgRepo, userRepo)
-	privateMessageService := privatemessageservice.New(privateMsgRepo, userRepo)
-	authService := authservice.New(userRepo)
+	savedChan = &ch
 
-	return userService, publicMessageService, privateMessageService, authService
+	if conf.InMemoryDB.LoadFixtures {
+		fixtures.LoadFixtures(db)
+	}
+
+	return inmemoryrepository.NewUserRepo(db), inmemoryrepository.NewPublicMessageRepo(db), inmemoryrepository.NewPrivateMessageRepo(db)
+}
+
+func initPostgresRepos(conf *config.Config, logger *logrus.Logger) (*postgresrepo.UserRepo, *postgresrepo.PublicMessageRepo, *postgresrepo.PrivateMessageRepo) {
+	connStr := conf.Postgres.ConnectionURL()
+
+	conn, err := sql.Open("pgx", connStr)
+	if err != nil {
+		logger.Fatalf("cannot open database connection with connection string: %v, err: %v", connStr, err)
+	}
+
+	db := sqlx.NewDb(conn, "postgres")
+
+	return postgresrepo.NewUserRepo(db), postgresrepo.NewPublicMessageRepo(db), postgresrepo.NewPrivateMessageRepo(db)
+}
+
+func initServices(
+	usrRepo UserRepo,
+	pubMsgRepo PublicMessageRepo,
+	privMsgRepo PrivateMessageRepo) (
+	*userservice.Service,
+	*publicmessageservice.Service,
+	*privatemessageservice.Service,
+	*authservice.Service) {
+	return userservice.New(usrRepo), publicmessageservice.New(pubMsgRepo, usrRepo), privatemessageservice.New(privMsgRepo, usrRepo), authservice.New(usrRepo)
 }
 
 func initConfig() (*config.Config, error) { // todo: to internals utils?
@@ -149,6 +201,7 @@ func initAuthMiddleware(typ string, secret string, authService authhandler.AuthS
 
 func main() {
 	logger := logrus.New()
+	ctx, cancel := context.WithCancel(context.Background())
 
 	conf, err := initConfig()
 	if err != nil {
@@ -157,14 +210,26 @@ func main() {
 
 	logger.Infof("CONFIG: %+v", conf)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	var (
+		userRepo           UserRepo
+		publicMessageRepo  PublicMessageRepo
+		privateMessageRepo PrivateMessageRepo
+	)
 
-	inMemDB, savedChan := initDB(ctx)
-	if loadFixtures { // todo: to config
-		fixtures.LoadFixtures(inMemDB)
+	var savedChan <-chan any
+
+	switch conf.DB {
+	case "postgres":
+		userRepo, publicMessageRepo, privateMessageRepo = initPostgresRepos(conf, logger)
+
+	case "inmem":
+		userRepo, publicMessageRepo, privateMessageRepo = initInMemRepos(ctx, conf, &savedChan)
+
+	default:
+		userRepo, publicMessageRepo, privateMessageRepo = initPostgresRepos(conf, logger)
 	}
 
-	userService, publicMessageService, privateMessageService, authService := initInMemServices(inMemDB)
+	userService, publicMessageService, privateMessageService, authService := initServices(userRepo, publicMessageRepo, privateMessageRepo)
 
 	valid := validator.New(validator.WithRequiredStructEnabled())
 
@@ -229,5 +294,6 @@ func main() {
 		cancel()
 	}()
 
+	// wait for inmem db being saved
 	<-savedChan
 }
