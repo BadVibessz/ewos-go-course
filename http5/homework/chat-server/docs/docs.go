@@ -221,7 +221,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/messages/private/user/{from_username}": {
+        "/api/v1/messages/private/user": {
             "get": {
                 "security": [
                     {
@@ -256,9 +256,9 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "User FromUsername",
+                        "description": "from_username",
                         "name": "from_username",
-                        "in": "path",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -511,17 +511,12 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "content",
-                "from_username",
                 "to_username"
             ],
             "properties": {
                 "content": {
                     "type": "string",
                     "maxLength": 2000,
-                    "minLength": 1
-                },
-                "from_username": {
-                    "type": "string",
                     "minLength": 1
                 },
                 "to_username": {
@@ -533,17 +528,12 @@ const docTemplate = `{
         "request.SendPublicMessageRequest": {
             "type": "object",
             "required": [
-                "content",
-                "from_username"
+                "content"
             ],
             "properties": {
                 "content": {
                     "type": "string",
                     "maxLength": 2000,
-                    "minLength": 1
-                },
-                "from_username": {
-                    "type": "string",
                     "minLength": 1
                 }
             }

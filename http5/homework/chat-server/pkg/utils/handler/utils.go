@@ -22,6 +22,20 @@ func WriteErrResponseAndLog(rw http.ResponseWriter, logger *logrus.Logger, statu
 	}
 }
 
+func GetIntParamFromQuery(req *http.Request, key string) (int, error) {
+	return strconv.Atoi(req.URL.Query().Get(key))
+}
+
+func GetStringParamFromQuery(req *http.Request, key string) (string, error) {
+	str := req.URL.Query().Get(key)
+
+	if str == "" {
+		return str, ErrNoQueryParamProvided
+	}
+
+	return str, nil
+}
+
 func GetIntHeaderByKey(req *http.Request, key string) (int, error) {
 	str := req.Header.Get(key)
 	if str == "" {

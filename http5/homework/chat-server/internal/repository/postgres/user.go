@@ -49,8 +49,6 @@ func (ur *UserRepo) GetAllUsers(ctx context.Context, offset, limit int) []*entit
 		users = append(users, &user)
 	}
 
-	// map []User -> []*User
-	//return sliceutils.Map(users, func(usr entity.User) *entity.User { return &usr })
 	return users
 }
 
@@ -61,7 +59,9 @@ func (ur *UserRepo) AddUser(ctx context.Context, user entity.User) (*entity.User
 	user.UpdatedAt = now
 
 	result, err := ur.DB.NamedQueryContext(ctx,
-		"INSERT INTO users (email, username, hashed_password, created_at, updated_at) VALUES (:email, :username, :hashed_password, :created_at, :updated_at)",
+		`INSERT INTO users (email, username, hashed_password, created_at, updated_at) 
+VALUES (:email, :username, :hashed_password, :created_at, :updated_at) 
+RETURNING id, email, username, hashed_password, created_at, updated_at`,
 		&user)
 	if err != nil {
 		return nil, err
@@ -69,17 +69,17 @@ func (ur *UserRepo) AddUser(ctx context.Context, user entity.User) (*entity.User
 
 	var usr entity.User
 
-	result.Next() // todo:!!!!!!!!
-	err = result.StructScan(&usr)
-	if err != nil {
-		return nil, err
+	if result.Next() {
+		if err = result.StructScan(&usr); err != nil {
+			return nil, err
+		}
 	}
 
 	return &usr, nil
 }
 
 func (ur *UserRepo) getUserByArg(ctx context.Context, argName string, arg any) (*entity.User, error) {
-	row := ur.DB.QueryRowxContext(ctx, "SELECT * FROM users WHERE $1 = $2", argName, arg)
+	row := ur.DB.QueryRowxContext(ctx, fmt.Sprintf("SELECT * FROM users WHERE %v = '%v'", argName, arg))
 	if err := row.Err(); err != nil {
 		return nil, err
 	}

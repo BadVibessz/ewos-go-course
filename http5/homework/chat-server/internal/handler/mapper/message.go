@@ -25,17 +25,17 @@ func MapPrivateMessageToResponse(msg *entity.PrivateMessage) response.GetPrivate
 	}
 }
 
-func MapSendPrivateMessageRequestToEntity(req request.SendPrivateMessageRequest) entity.PrivateMessage {
+func MapSendPrivateMessageRequestToEntity(req request.SendPrivateMessageRequest, fromUsername string) entity.PrivateMessage {
 	return entity.PrivateMessage{
-		FromUsername: req.FromUsername,
+		FromUsername: fromUsername,
 		ToUsername:   req.ToUsername,
 		Content:      req.Content,
 	}
 }
 
-func MapSendPublicMessageRequestToEntity(req request.SendPublicMessageRequest) entity.PublicMessage {
+func MapSendPublicMessageRequestToEntity(req request.SendPublicMessageRequest, fromUsername string) entity.PublicMessage {
 	return entity.PublicMessage{
-		FromUsername: req.FromUsername,
+		FromUsername: fromUsername,
 		Content:      req.Content,
 	}
 }

@@ -136,8 +136,6 @@ func (h *Handler) SendPublicMessage(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	pubMsgReq.FromUsername = username
-
 	if err = pubMsgReq.Validate(h.validator); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating PublicMessageRequest struct: %s", err)
 		respMsg := fmt.Sprintf("invalid message provided: %s", err)
@@ -147,7 +145,7 @@ func (h *Handler) SendPublicMessage(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	message, err := h.MessageService.SendPublicMessage(req.Context(), mapper.MapSendPublicMessageRequestToEntity(pubMsgReq))
+	message, err := h.MessageService.SendPublicMessage(req.Context(), mapper.MapSendPublicMessageRequestToEntity(pubMsgReq, username))
 	if err != nil {
 		logMsg := fmt.Sprintf("error occurred saving public message: %s", err)
 

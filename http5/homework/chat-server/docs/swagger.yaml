@@ -36,15 +36,11 @@ definitions:
         maxLength: 2000
         minLength: 1
         type: string
-      from_username:
-        minLength: 1
-        type: string
       to_username:
         minLength: 1
         type: string
     required:
     - content
-    - from_username
     - to_username
     type: object
   request.SendPublicMessageRequest:
@@ -53,12 +49,8 @@ definitions:
         maxLength: 2000
         minLength: 1
         type: string
-      from_username:
-        minLength: 1
-        type: string
     required:
     - content
-    - from_username
     type: object
   response.GetPrivateMessageResponse:
     properties:
@@ -239,7 +231,7 @@ paths:
       summary: Send private message to user
       tags:
       - Message
-  /api/v1/messages/private/user/{from_username}:
+  /api/v1/messages/private/user:
     get:
       description: Get all private messages from user
       parameters:
@@ -253,8 +245,8 @@ paths:
         name: limit
         required: true
         type: integer
-      - description: User FromUsername
-        in: path
+      - description: from_username
+        in: query
         name: from_username
         required: true
         type: string

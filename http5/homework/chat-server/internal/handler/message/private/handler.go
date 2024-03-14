@@ -74,7 +74,7 @@ func (h *Handler) Routes() *chi.Mux {
 		r.Get("/", h.GetAllPrivateMessages)
 		r.Post("/", h.SendPrivateMessage)
 
-		r.Get("/user/{id}", h.GetAllPrivateMessagesFromUser)
+		r.Get("/user", h.GetAllPrivateMessagesFromUser)
 	})
 
 	return router
@@ -127,8 +127,6 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	privMsgReq.FromUsername = username
-
 	if err = privMsgReq.Validate(h.validator); err != nil {
 		logMsg := fmt.Sprintf("error occurred validating PrivateMessageRequest struct: %v", err)
 		respMsg := fmt.Sprintf("invalid message provided: %v", err)
@@ -138,7 +136,7 @@ func (h *Handler) SendPrivateMessage(rw http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	message, err := h.MessageService.SendPrivateMessage(req.Context(), mapper.MapSendPrivateMessageRequestToEntity(privMsgReq))
+	message, err := h.MessageService.SendPrivateMessage(req.Context(), mapper.MapSendPrivateMessageRequestToEntity(privMsgReq, username))
 	if err != nil {
 		switchByErrorAndWriteResponse(err, rw, h.logger)
 	}
@@ -189,13 +187,12 @@ func (h *Handler) GetAllPrivateMessages(rw http.ResponseWriter, req *http.Reques
 //	@Security		JWT
 //	@Tags			Message
 //	@Produce		json
-//	@Param			offset			query	int		true	"Offset"
-//	@Param			limit			query	int		true	"Limit"
-//	@Param			from_username	path	string	true	"User FromUsername"
-//	@Para			page query int true "page"
-//	@Success		200	{object}	[]response.GetPrivateMessageResponse
-//	@Failure		401	{string}	Unauthorized
-//	@Router			/api/v1/messages/private/user/{from_username} [get]
+//	@Param			offset			query		int		true	"Offset"
+//	@Param			limit			query		int		true	"Limit"
+//	@Param			from_username	query		string	true	"from_username"
+//	@Success		200				{object}	[]response.GetPrivateMessageResponse
+//	@Failure		401				{string}	Unauthorized
+//	@Router			/api/v1/messages/private/user [get]
 func (h *Handler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, req *http.Request) {
 	username, err := handlerutils.GetStringHeaderByKey(req, "username")
 	if err != nil {
@@ -205,9 +202,11 @@ func (h *Handler) GetAllPrivateMessagesFromUser(rw http.ResponseWriter, req *htt
 
 	ctx := req.Context() // TODO: method not working!
 
-	fromUsername := chi.URLParam(req, "from_username") // TODO: RECEIVE FROM USERNAME FROM BODY NOT FROM ULR PARAM
-	if fromUsername == "" {
-		rw.WriteHeader(http.StatusBadRequest) // todo: more concrete output
+	fromUsername, err := handlerutils.GetStringParamFromQuery(req, "from_username")
+	if err != nil {
+		msg := fmt.Sprintf("error occurred retrieving from_username query param from request: %v", err)
+
+		handlerutils.WriteErrResponseAndLog(rw, h.logger, http.StatusBadRequest, msg, msg)
 		return
 	}
 

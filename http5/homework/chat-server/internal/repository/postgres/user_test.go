@@ -38,7 +38,7 @@ func (a AnyTime) Match(v driver.Value) bool {
 	return ok
 }
 
-func TestUserRepo_AddUser(t *testing.T) {
+func TestUserRepo_AddUser(t *testing.T) { // TODO: CHANGE!
 	db, mock, err := sqlxmock.Newx()
 	if err != nil {
 		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
@@ -63,11 +63,13 @@ func TestUserRepo_AddUser(t *testing.T) {
 		{
 			name: "ok",
 			mockBehaviour: func() {
-				result := sqlxmock.NewResult(1, 1)
+				rows := sqlxmock.
+					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"}).
+					AddRow(1, "username", "email@mail.com", "hashed_password", now, now)
 
-				mock.ExpectExec("INSERT INTO users").
+				mock.ExpectQuery("INSERT INTO users").
 					WithArgs("email@mail.com", "username", "hashed_password", AnyTime{}, AnyTime{}).
-					WillReturnResult(result)
+					WillReturnRows(rows)
 			},
 
 			input: inputArgs{
@@ -89,7 +91,7 @@ func TestUserRepo_AddUser(t *testing.T) {
 		{
 			name: "empty fields",
 			mockBehaviour: func() {
-				mock.ExpectExec("INSERT INTO users").
+				mock.ExpectQuery("INSERT INTO users").
 					WithArgs("", "", "", AnyTime{}, AnyTime{}).
 					WillReturnError(errors.New("not null constraint not satisfied"))
 			},
@@ -312,9 +314,9 @@ func TestUserRepo_GetByID(t *testing.T) {
 					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"}).
 					AddRow(1, "username", "email@mail.com", "hashed_password", time.Time{}, time.Time{})
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM users WHERE $1 = $2`)).
-					WithArgs("id", 1).
-					WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE id = 1")). // TODO: NOT WORKING!
+													WithArgs(1).
+													WillReturnRows(rows)
 			},
 			input: 1,
 			want: entity.User{

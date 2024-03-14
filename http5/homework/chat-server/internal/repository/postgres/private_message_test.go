@@ -3,29 +3,26 @@ package postgres
 import (
 	"context"
 	"errors"
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
+	"github.com/stretchr/testify/assert"
+	sqlxmock "github.com/zhashkevych/go-sqlxmock"
 	"math"
 	"regexp"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-
-	sqlxmock "github.com/zhashkevych/go-sqlxmock"
-
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
-
-	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
-func publicMessagesEqual(msg1, msg2 entity.PublicMessage) bool {
+func privateMessagesEqual(msg1, msg2 entity.PrivateMessage) bool {
 	return msg1.ID == msg2.ID &&
 		msg1.FromUsername == msg2.FromUsername &&
+		msg1.ToUsername == msg2.ToUsername &&
 		msg1.Content == msg2.Content &&
 		timesAlmostEqual(msg1.SentAt, msg2.SentAt) &&
 		timesAlmostEqual(msg1.EditedAt, msg2.EditedAt)
 }
 
-func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
+func TestPrivateMessageRepo_AddMessage(t *testing.T) {
 	db, mock, err := sqlxmock.Newx()
 	if err != nil {
 		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
@@ -33,10 +30,10 @@ func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
 
 	defer db.Close()
 
-	repo := NewPublicMessageRepo(db)
+	repo := NewPrivateMessageRepo(db)
 
-	type inputArgs = entity.PublicMessage
-	type outputArg = *entity.PublicMessage
+	type inputArgs = entity.PrivateMessage
+	type outputArg = *entity.PrivateMessage
 
 	now := time.Now()
 
@@ -50,21 +47,23 @@ func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
 		{
 			name: "ok",
 			mockBehaviour: func() {
-				rows := sqlxmock.NewRows([]string{"id", "from_username", "content", "sent_at", "edited_at"}).
-					AddRow(1, "from_username", "content", now, now)
+				rows := sqlxmock.NewRows([]string{"id", "from_username", "to_username", "content", "sent_at", "edited_at"}).
+					AddRow(1, "from_username", "to_username", "content", now, now)
 
-				mock.ExpectQuery("INSERT INTO public_message").
-					WithArgs("from_username", "content", AnyTime{}, AnyTime{}).
+				mock.ExpectQuery("INSERT INTO private_message").
+					WithArgs("from_username", "to_username", "content", AnyTime{}, AnyTime{}).
 					WillReturnRows(rows)
 			},
 
 			input: inputArgs{
 				FromUsername: "from_username",
+				ToUsername:   "to_username",
 				Content:      "content",
 			},
 			want: &inputArgs{
 				ID:           1,
 				FromUsername: "from_username",
+				ToUsername:   "to_username",
 				Content:      "content",
 				SentAt:       now,
 				EditedAt:     now,
@@ -73,13 +72,14 @@ func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
 		{
 			name: "empty fields",
 			mockBehaviour: func() {
-				mock.ExpectQuery("INSERT INTO public_message").
-					WithArgs("", "", AnyTime{}, AnyTime{}).
+				mock.ExpectQuery("INSERT INTO private_message").
+					WithArgs("", "", "", AnyTime{}, AnyTime{}).
 					WillReturnError(errors.New("not null constraint not satisfied"))
 			},
 
 			input: inputArgs{
 				FromUsername: "",
+				ToUsername:   "",
 				Content:      "",
 			},
 
@@ -93,13 +93,13 @@ func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
 		t.Run(test.name, func(t *testing.T) {
 			test.mockBehaviour()
 
-			got, err := repo.AddPublicMessage(ctx, test.input)
+			got, err := repo.AddPrivateMessage(ctx, test.input)
 
 			if test.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, publicMessagesEqual(*test.want, *got))
+				assert.True(t, privateMessagesEqual(*test.want, *got))
 			}
 
 			assert.NoError(t, mock.ExpectationsWereMet())
@@ -107,7 +107,7 @@ func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
 	}
 }
 
-func TestPublicMessageRepo_GetAll(t *testing.T) {
+func TestPrivateMessageRepo_GetAll(t *testing.T) {
 	db, mock, err := sqlxmock.Newx()
 	if err != nil {
 		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
@@ -115,9 +115,9 @@ func TestPublicMessageRepo_GetAll(t *testing.T) {
 
 	defer db.Close()
 
-	repo := NewPublicMessageRepo(db)
+	repo := NewPrivateMessageRepo(db)
 
-	type outputArg = []entity.PublicMessage
+	type outputArg = []entity.PrivateMessage
 
 	tests := []struct {
 		name          string
@@ -131,34 +131,37 @@ func TestPublicMessageRepo_GetAll(t *testing.T) {
 			name: "ok, no limit, no offset",
 			mockBehaviour: func() {
 				rows := sqlxmock.
-					NewRows([]string{"id", "from_username", "content", "sent_at", "edited_at"}).
-					AddRow(1, "username", "content", time.Time{}, time.Time{}).
-					AddRow(2, "username2", "content", time.Time{}, time.Time{}).
-					AddRow(3, "username3", "content", time.Time{}, time.Time{})
+					NewRows([]string{"id", "from_username", "to_username", "content", "sent_at", "edited_at"}).
+					AddRow(1, "from_username", "to_username", "content", time.Time{}, time.Time{}).
+					AddRow(2, "from_username2", "to_username2", "content", time.Time{}, time.Time{}).
+					AddRow(3, "from_username3", "to_username3", "content", time.Time{}, time.Time{})
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM public_message ORDER BY sent_at OFFSET 0`)).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM private_message ORDER BY sent_at OFFSET 0`)).WillReturnRows(rows)
 			},
 
 			limit:  math.MaxInt64,
 			offset: 0,
-			want: []entity.PublicMessage{
+			want: []entity.PrivateMessage{
 				{
 					ID:           1,
-					FromUsername: "username",
+					FromUsername: "from_username",
+					ToUsername:   "to_username",
 					Content:      "content",
 					SentAt:       time.Time{},
 					EditedAt:     time.Time{},
 				},
 				{
 					ID:           2,
-					FromUsername: "username2",
+					FromUsername: "from_username2",
+					ToUsername:   "to_username2",
 					Content:      "content",
 					SentAt:       time.Time{},
 					EditedAt:     time.Time{},
 				},
 				{
 					ID:           3,
-					FromUsername: "username3",
+					FromUsername: "from_username3",
+					ToUsername:   "to_username3",
 					Content:      "content",
 					SentAt:       time.Time{},
 					EditedAt:     time.Time{},
@@ -169,26 +172,28 @@ func TestPublicMessageRepo_GetAll(t *testing.T) {
 			name: "ok, no limit, offset 1",
 			mockBehaviour: func() {
 				rows := sqlxmock.
-					NewRows([]string{"id", "from_username", "content", "sent_at", "edited_at"}).
-					AddRow(2, "username2", "content", time.Time{}, time.Time{}).
-					AddRow(3, "username3", "content", time.Time{}, time.Time{})
+					NewRows([]string{"id", "from_username", "to_username", "content", "sent_at", "edited_at"}).
+					AddRow(2, "from_username2", "to_username2", "content", time.Time{}, time.Time{}).
+					AddRow(3, "from_username3", "to_username3", "content", time.Time{}, time.Time{})
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM public_message ORDER BY sent_at OFFSET 1`)).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM private_message ORDER BY sent_at OFFSET 1`)).WillReturnRows(rows)
 			},
 
 			limit:  math.MaxInt64,
 			offset: 1,
-			want: []entity.PublicMessage{
+			want: []entity.PrivateMessage{
 				{
 					ID:           2,
-					FromUsername: "username2",
+					FromUsername: "from_username2",
+					ToUsername:   "to_username2",
 					Content:      "content",
 					SentAt:       time.Time{},
 					EditedAt:     time.Time{},
 				},
 				{
 					ID:           3,
-					FromUsername: "username3",
+					FromUsername: "from_username3",
+					ToUsername:   "to_username3",
 					Content:      "content",
 					SentAt:       time.Time{},
 					EditedAt:     time.Time{},
@@ -199,18 +204,19 @@ func TestPublicMessageRepo_GetAll(t *testing.T) {
 			name: "ok, limit 1, offset 1",
 			mockBehaviour: func() {
 				rows := sqlxmock.
-					NewRows([]string{"id", "from_username", "content", "sent_at", "edited_at"}).
-					AddRow(2, "username2", "content", time.Time{}, time.Time{})
+					NewRows([]string{"id", "from_username", "to_username", "content", "sent_at", "edited_at"}).
+					AddRow(2, "from_username2", "to_username2", "content", time.Time{}, time.Time{})
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM public_message ORDER BY sent_at LIMIT 1 OFFSET 1`)).WillReturnRows(rows)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM private_message ORDER BY sent_at LIMIT 1 OFFSET 1`)).WillReturnRows(rows)
 			},
 
 			limit:  1,
 			offset: 1,
-			want: []entity.PublicMessage{
+			want: []entity.PrivateMessage{
 				{
 					ID:           2,
-					FromUsername: "username2",
+					FromUsername: "from_username2",
+					ToUsername:   "to_username2",
 					Content:      "content",
 					SentAt:       time.Time{},
 					EditedAt:     time.Time{},
@@ -222,7 +228,7 @@ func TestPublicMessageRepo_GetAll(t *testing.T) {
 			mockBehaviour: func() {
 				rows := sqlxmock.NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"})
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM public_message ORDER BY sent_at LIMIT -1 OFFSET -1`)).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM private_message ORDER BY sent_at LIMIT -1 OFFSET -1`)).
 					WillReturnRows(rows)
 			},
 
@@ -238,7 +244,7 @@ func TestPublicMessageRepo_GetAll(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			test.mockBehaviour()
 
-			got := repo.GetAllPublicMessages(ctx, test.offset, test.limit)
+			got := repo.GetAllPrivateMessages(ctx, test.offset, test.limit)
 
 			if test.wantErr {
 				assert.Error(t, err)
@@ -252,7 +258,7 @@ func TestPublicMessageRepo_GetAll(t *testing.T) {
 	}
 }
 
-func TestPublicMessageRepo_Get(t *testing.T) {
+func TestPrivateMessageRepo_Get(t *testing.T) {
 	db, mock, err := sqlxmock.Newx()
 	if err != nil {
 		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
@@ -260,9 +266,9 @@ func TestPublicMessageRepo_Get(t *testing.T) {
 
 	defer db.Close()
 
-	repo := NewPublicMessageRepo(db)
+	repo := NewPrivateMessageRepo(db)
 
-	type outputArg = entity.PublicMessage
+	type outputArg = entity.PrivateMessage
 	type inputArg = int
 
 	tests := []struct {
@@ -276,18 +282,19 @@ func TestPublicMessageRepo_Get(t *testing.T) {
 			name: "ok, valid id",
 			mockBehaviour: func() {
 				rows := sqlxmock.
-					NewRows([]string{"id", "from_username", "content", "sent_at", "edited_at"}).
-					AddRow(1, "username", "content", time.Time{}, time.Time{})
+					NewRows([]string{"id", "from_username", "to_username", "content", "sent_at", "edited_at"}).
+					AddRow(1, "from_username", "to_username", "content", time.Time{}, time.Time{})
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM public_message WHERE id = $1`)).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM private_message WHERE id = $1`)).
 					WithArgs(1).
 					WillReturnRows(rows)
 			},
 
 			input: 1,
-			want: entity.PublicMessage{
+			want: entity.PrivateMessage{
 				ID:           1,
-				FromUsername: "username",
+				FromUsername: "from_username",
+				ToUsername:   "to_username",
 				Content:      "content",
 				SentAt:       time.Time{},
 				EditedAt:     time.Time{},
@@ -296,9 +303,9 @@ func TestPublicMessageRepo_Get(t *testing.T) {
 		{
 			name: "err, invalid id (no such id)",
 			mockBehaviour: func() {
-				rows := sqlxmock.NewRows([]string{"id", "from_username", "content", "sent_at", "edited_at"})
+				rows := sqlxmock.NewRows([]string{"id", "from_username", "to_username", "content", "sent_at", "edited_at"})
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM public_message WHERE id = $1`)).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM private_message WHERE id = $1`)).
 					WithArgs(1).
 					WillReturnRows(rows)
 			},
@@ -309,9 +316,9 @@ func TestPublicMessageRepo_Get(t *testing.T) {
 		{
 			name: "err, invalid id (negative value)",
 			mockBehaviour: func() {
-				rows := sqlxmock.NewRows([]string{"id", "from_username", "content", "sent_at", "edited_at"})
+				rows := sqlxmock.NewRows([]string{"id", "from_username", "to_username", "content", "sent_at", "edited_at"})
 
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM public_message WHERE id = $1`)).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM private_message WHERE id = $1`)).
 					WithArgs(-1).
 					WillReturnRows(rows)
 			},
@@ -327,7 +334,7 @@ func TestPublicMessageRepo_Get(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			test.mockBehaviour()
 
-			got, err := repo.GetPublicMessage(ctx, test.input)
+			got, err := repo.GetPrivateMessage(ctx, test.input)
 
 			if test.wantErr {
 				assert.Error(t, err)

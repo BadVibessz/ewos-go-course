@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -25,25 +27,36 @@ func (pr *PublicMessageRepo) AddPublicMessage(ctx context.Context, msg entity.Pu
 	msg.SentAt = now
 	msg.EditedAt = now
 
-	result, err := pr.DB.NamedExecContext(ctx,
-		"INSERT INTO public_message (from_username, content, sent_at, edited_at) VALUES (:from_username, :content, :sent_at, :edited_at)",
+	result, err := pr.DB.NamedQueryContext(ctx,
+		`INSERT INTO public_message (from_username, content, sent_at, edited_at) 
+VALUES (:from_username, :content, :sent_at, :edited_at) 
+RETURNING id, from_username, content, sent_at, edited_at`,
 		&msg)
 	if err != nil {
 		return nil, err
 	}
 
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
+	var resMsg entity.PublicMessage
+
+	if result.Next() {
+		if err = result.StructScan(&resMsg); err != nil {
+			return nil, err
+		}
 	}
 
-	msg.ID = int(id)
-
-	return &msg, nil
+	return &resMsg, nil
 }
 
 func (pr *PublicMessageRepo) GetAllPublicMessages(ctx context.Context, offset, limit int) []*entity.PublicMessage {
-	rows, err := pr.DB.QueryxContext(ctx, "SELECT * FROM public_message ORDER BY sent_at LIMIT $1 OFFSET $2", limit, offset)
+	var query string
+
+	if limit == math.MaxInt64 {
+		query = fmt.Sprintf("SELECT * FROM public_message ORDER BY sent_at OFFSET %v", offset)
+	} else {
+		query = fmt.Sprintf("SELECT * FROM public_message ORDER BY sent_at LIMIT %v OFFSET %v", limit, offset)
+	}
+
+	rows, err := pr.DB.QueryxContext(ctx, query)
 	if err != nil {
 		return nil
 	}
