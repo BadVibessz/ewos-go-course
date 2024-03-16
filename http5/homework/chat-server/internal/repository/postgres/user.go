@@ -129,6 +129,8 @@ func (ur *UserRepo) UpdateUser(ctx context.Context, id int, updated entity.User)
 
 	query := "UPDATE users SET email=:email, username=:username, hashed_password=:hashed_password, updated_at=:updated_at" + fmt.Sprintf("WHERE :id = %v", id)
 
+	// todo: RETURNING in update state?
+
 	_, err := tx.NamedExecContext(ctx, query, &updated)
 	if err != nil {
 		return nil, err

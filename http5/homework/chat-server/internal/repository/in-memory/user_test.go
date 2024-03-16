@@ -1,8 +1,7 @@
-package repository
+package in_memory
 
 import (
 	"context"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository/in-memory"
 	"math"
 	"testing"
 
@@ -12,10 +11,10 @@ import (
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
-func initRepo(ctx context.Context) *in_memory.UserRepo {
+func initRepo(ctx context.Context) *UserRepo {
 	db, _ := inmemory.NewInMemDB(ctx, "")
 
-	return in_memory.NewUserRepo(db)
+	return NewUserRepo(db)
 }
 
 func isEqualCreateModelToUser(createModel *entity.User, user *entity.User) bool {

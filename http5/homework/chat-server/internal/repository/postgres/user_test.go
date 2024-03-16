@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"database/sql/driver"
 	"github.com/stretchr/testify/assert"
 
 	sqlxmock "github.com/zhashkevych/go-sqlxmock"
@@ -16,29 +15,10 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
+	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/testing"
 )
 
-func timesAlmostEqual(tim1, tim2 time.Time) bool {
-	return tim1.Sub(tim2) <= 1*time.Second
-}
-
-func usersEqual(usr1, usr2 entity.User) bool {
-	return usr1.ID == usr2.ID &&
-		usr1.Username == usr2.Username &&
-		usr1.Email == usr2.Email &&
-		timesAlmostEqual(usr1.CreatedAt, usr2.CreatedAt) &&
-		timesAlmostEqual(usr1.UpdatedAt, usr2.UpdatedAt)
-
-}
-
-type AnyTime struct{}
-
-func (a AnyTime) Match(v driver.Value) bool {
-	_, ok := v.(time.Time)
-	return ok
-}
-
-func TestUserRepo_AddUser(t *testing.T) { // TODO: CHANGE!
+func TestUserRepo_AddUser(t *testing.T) {
 	db, mock, err := sqlxmock.Newx()
 	if err != nil {
 		t.Fatalf("an error '%v' was not expected when opening a stub database connection", err)
@@ -68,7 +48,7 @@ func TestUserRepo_AddUser(t *testing.T) { // TODO: CHANGE!
 					AddRow(1, "username", "email@mail.com", "hashed_password", now, now)
 
 				mock.ExpectQuery("INSERT INTO users").
-					WithArgs("email@mail.com", "username", "hashed_password", AnyTime{}, AnyTime{}).
+					WithArgs("email@mail.com", "username", "hashed_password", testingutils.AnyTime{}, testingutils.AnyTime{}).
 					WillReturnRows(rows)
 			},
 
@@ -92,7 +72,7 @@ func TestUserRepo_AddUser(t *testing.T) { // TODO: CHANGE!
 			name: "empty fields",
 			mockBehaviour: func() {
 				mock.ExpectQuery("INSERT INTO users").
-					WithArgs("", "", "", AnyTime{}, AnyTime{}).
+					WithArgs("", "", "", testingutils.AnyTime{}, testingutils.AnyTime{}).
 					WillReturnError(errors.New("not null constraint not satisfied"))
 			},
 
@@ -128,7 +108,7 @@ func TestUserRepo_AddUser(t *testing.T) { // TODO: CHANGE!
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, usersEqual(*test.want, *got))
+				assert.True(t, testingutils.UsersEquals(*test.want, *got))
 			}
 
 			assert.NoError(t, mock.ExpectationsWereMet())
@@ -279,7 +259,7 @@ func TestUserRepo_GetAll(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, sliceutils.PointerAndValueSlicesEqual(got, test.want))
+				assert.True(t, sliceutils.PointerAndValueSlicesEquals(got, test.want))
 			}
 
 			assert.NoError(t, mock.ExpectationsWereMet())

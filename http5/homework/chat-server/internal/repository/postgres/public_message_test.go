@@ -15,15 +15,8 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
+	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/testing"
 )
-
-func publicMessagesEqual(msg1, msg2 entity.PublicMessage) bool {
-	return msg1.ID == msg2.ID &&
-		msg1.FromUsername == msg2.FromUsername &&
-		msg1.Content == msg2.Content &&
-		timesAlmostEqual(msg1.SentAt, msg2.SentAt) &&
-		timesAlmostEqual(msg1.EditedAt, msg2.EditedAt)
-}
 
 func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
 	db, mock, err := sqlxmock.Newx()
@@ -54,7 +47,7 @@ func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
 					AddRow(1, "from_username", "content", now, now)
 
 				mock.ExpectQuery("INSERT INTO public_message").
-					WithArgs("from_username", "content", AnyTime{}, AnyTime{}).
+					WithArgs("from_username", "content", testingutils.AnyTime{}, testingutils.AnyTime{}).
 					WillReturnRows(rows)
 			},
 
@@ -74,7 +67,7 @@ func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
 			name: "empty fields",
 			mockBehaviour: func() {
 				mock.ExpectQuery("INSERT INTO public_message").
-					WithArgs("", "", AnyTime{}, AnyTime{}).
+					WithArgs("", "", testingutils.AnyTime{}, testingutils.AnyTime{}).
 					WillReturnError(errors.New("not null constraint not satisfied"))
 			},
 
@@ -99,7 +92,7 @@ func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, publicMessagesEqual(*test.want, *got))
+				assert.True(t, testingutils.PublicMessagesEquals(*test.want, *got))
 			}
 
 			assert.NoError(t, mock.ExpectationsWereMet())
@@ -244,7 +237,7 @@ func TestPublicMessageRepo_GetAll(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, sliceutils.PointerAndValueSlicesEqual(got, test.want))
+				assert.True(t, sliceutils.PointerAndValueSlicesEquals(got, test.want))
 			}
 
 			assert.NoError(t, mock.ExpectationsWereMet())

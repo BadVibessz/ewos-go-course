@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -89,6 +90,13 @@ type PrivateMessageRepo interface {
 	GetPrivateMessage(ctx context.Context, id int) (*entity.PrivateMessage, error)
 }
 
+type Hasher struct {
+}
+
+func (h *Hasher) GenerateFromPassword(password []byte, cost int) ([]byte, error) {
+	return bcrypt.GenerateFromPassword(password, cost)
+}
+
 func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	var inMemDB *inmemory.InMemDB
 
@@ -136,17 +144,6 @@ func initPostgresRepos(conf *config.Config, logger *logrus.Logger) (*postgresrep
 	db := sqlx.NewDb(conn, "postgres")
 
 	return postgresrepo.NewUserRepo(db), postgresrepo.NewPublicMessageRepo(db), postgresrepo.NewPrivateMessageRepo(db)
-}
-
-func initServices(
-	usrRepo UserRepo,
-	pubMsgRepo PublicMessageRepo,
-	privMsgRepo PrivateMessageRepo) (
-	*userservice.Service,
-	*publicmessageservice.Service,
-	*privatemessageservice.Service,
-	*authservice.Service) {
-	return userservice.New(usrRepo), publicmessageservice.New(pubMsgRepo, usrRepo), privatemessageservice.New(privMsgRepo, usrRepo), authservice.New(usrRepo)
 }
 
 func initConfig() (*config.Config, error) { // todo: to internals utils?
@@ -229,7 +226,10 @@ func main() {
 		userRepo, publicMessageRepo, privateMessageRepo = initPostgresRepos(conf, logger)
 	}
 
-	userService, publicMessageService, privateMessageService, authService := initServices(userRepo, publicMessageRepo, privateMessageRepo)
+	userService := userservice.New(userRepo, &Hasher{})
+	publicMessageService := publicmessageservice.New(publicMessageRepo, userRepo)
+	privateMessageService := privatemessageservice.New(privateMessageRepo, userRepo)
+	authService := authservice.New(userRepo)
 
 	valid := validator.New(validator.WithRequiredStructEnabled())
 

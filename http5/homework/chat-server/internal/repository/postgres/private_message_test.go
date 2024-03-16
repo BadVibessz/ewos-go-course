@@ -4,23 +4,17 @@ import (
 	"context"
 	"errors"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
-	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 	"github.com/stretchr/testify/assert"
-	sqlxmock "github.com/zhashkevych/go-sqlxmock"
 	"math"
 	"regexp"
 	"testing"
 	"time"
-)
 
-func privateMessagesEqual(msg1, msg2 entity.PrivateMessage) bool {
-	return msg1.ID == msg2.ID &&
-		msg1.FromUsername == msg2.FromUsername &&
-		msg1.ToUsername == msg2.ToUsername &&
-		msg1.Content == msg2.Content &&
-		timesAlmostEqual(msg1.SentAt, msg2.SentAt) &&
-		timesAlmostEqual(msg1.EditedAt, msg2.EditedAt)
-}
+	sqlxmock "github.com/zhashkevych/go-sqlxmock"
+
+	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
+	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/testing"
+)
 
 func TestPrivateMessageRepo_AddMessage(t *testing.T) {
 	db, mock, err := sqlxmock.Newx()
@@ -51,7 +45,7 @@ func TestPrivateMessageRepo_AddMessage(t *testing.T) {
 					AddRow(1, "from_username", "to_username", "content", now, now)
 
 				mock.ExpectQuery("INSERT INTO private_message").
-					WithArgs("from_username", "to_username", "content", AnyTime{}, AnyTime{}).
+					WithArgs("from_username", "to_username", "content", testingutils.AnyTime{}, testingutils.AnyTime{}).
 					WillReturnRows(rows)
 			},
 
@@ -73,7 +67,7 @@ func TestPrivateMessageRepo_AddMessage(t *testing.T) {
 			name: "empty fields",
 			mockBehaviour: func() {
 				mock.ExpectQuery("INSERT INTO private_message").
-					WithArgs("", "", "", AnyTime{}, AnyTime{}).
+					WithArgs("", "", "", testingutils.AnyTime{}, testingutils.AnyTime{}).
 					WillReturnError(errors.New("not null constraint not satisfied"))
 			},
 
@@ -99,7 +93,7 @@ func TestPrivateMessageRepo_AddMessage(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, privateMessagesEqual(*test.want, *got))
+				assert.True(t, testingutils.PrivateMessagesEquals(*test.want, *got))
 			}
 
 			assert.NoError(t, mock.ExpectationsWereMet())
@@ -250,7 +244,7 @@ func TestPrivateMessageRepo_GetAll(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.True(t, sliceutils.PointerAndValueSlicesEqual(got, test.want))
+				assert.True(t, sliceutils.PointerAndValueSlicesEquals(got, test.want))
 			}
 
 			assert.NoError(t, mock.ExpectationsWereMet())
