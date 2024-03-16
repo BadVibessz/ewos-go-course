@@ -11,6 +11,8 @@ import (
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 )
 
+//go:generate mockgen -destination=../../../mocks/private_message_repository.go -package=mocks github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message/private PrivateMessageRepo
+
 type PrivateMessageRepo interface {
 	AddPrivateMessage(ctx context.Context, msg entity.PrivateMessage) (*entity.PrivateMessage, error)
 	GetAllPrivateMessages(ctx context.Context, offset, limit int) []*entity.PrivateMessage
@@ -74,8 +76,10 @@ func (s *Service) GetPrivateMessage(ctx context.Context, id int) (*entity.Privat
 func (s *Service) GetAllPrivateMessages(ctx context.Context, toUsername string, offset, limit int) []*entity.PrivateMessage {
 	messages := s.PrivateMessageRepo.GetAllPrivateMessages(ctx, 0, math.MaxInt64)
 
-	// return only messages that were sent to current user
-	messages = sliceutils.Filter(messages, func(msg *entity.PrivateMessage) bool { return msg.ToUsername == toUsername })
+	// return only messages that were sent to or from current user
+	messages = sliceutils.Filter(messages, func(msg *entity.PrivateMessage) bool {
+		return msg.ToUsername == toUsername || msg.FromUsername == toUsername
+	})
 
 	return sliceutils.Slice(messages, offset, limit)
 }

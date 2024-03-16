@@ -2,8 +2,11 @@ package public
 
 import (
 	"context"
+
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 )
+
+//go:generate mockgen -destination=../../../mocks/public_message_repository.go -package=mocks github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message/public PublicMessageRepo
 
 type PublicMessageRepo interface {
 	AddPublicMessage(ctx context.Context, msg entity.PublicMessage) (*entity.PublicMessage, error)

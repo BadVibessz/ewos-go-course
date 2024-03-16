@@ -583,6 +583,19 @@ func TestUserService_GetAll(t *testing.T) {
 			limit:  math.MaxInt64,
 			want:   nil,
 		},
+		{
+			name: "ok, no offset, limit 0",
+			mockBehaviour: func() {
+				repoMock.
+					EXPECT().
+					GetAllUsers(ctx, 0, 0).
+					Return(nil)
+			},
+
+			offset: 0,
+			limit:  0,
+			want:   nil,
+		},
 	}
 
 	for _, test := range tests {
@@ -737,6 +750,93 @@ func TestUserService_Update(t *testing.T) {
 			test.mockBehaviour()
 
 			got, err := service.UpdateUser(ctx, test.id, test.updateModel)
+
+			if test.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.True(t, testingutils.UsersEquals(*test.want, *got))
+			}
+		})
+	}
+}
+
+func TestUserService_Delete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	ctx := context.Background()
+	now := time.Now()
+
+	repoMock := mocks.NewMockUserRepo(ctrl)
+	hasherMock := mocks.NewMockHasher(ctrl)
+
+	service := New(repoMock, hasherMock)
+
+	type inputArg = int
+	type outputArg = *entity.User
+
+	tests := []struct {
+		name          string
+		mockBehaviour func()
+		input         inputArg
+		want          outputArg
+		wantErr       bool
+	}{
+		{
+			name: "ok, valid id",
+			mockBehaviour: func() {
+				repoMock.
+					EXPECT().
+					DeleteUser(ctx, 1).
+					Return(
+						&entity.User{
+							ID:             1,
+							Email:          "email@mail.com",
+							Username:       "username",
+							HashedPassword: "hashed_password",
+							CreatedAt:      now,
+							UpdatedAt:      now,
+						},
+						nil)
+			},
+			input: 1,
+			want: &entity.User{
+				ID:             1,
+				Email:          "email@mail.com",
+				Username:       "username",
+				HashedPassword: "hashed_password",
+				CreatedAt:      now,
+				UpdatedAt:      now,
+			},
+		},
+		{
+			name: "err, invalid id (no such)",
+			mockBehaviour: func() {
+				repoMock.
+					EXPECT().
+					DeleteUser(ctx, 1).
+					Return(nil, repoerrors.ErrNoSuchUser)
+			},
+			input:   1,
+			wantErr: true,
+		},
+		{
+			name: "err, invalid id (negative value)",
+			mockBehaviour: func() {
+				repoMock.
+					EXPECT().
+					DeleteUser(ctx, -1).
+					Return(nil, repoerrors.ErrNoSuchUser)
+			},
+			input:   -1,
+			wantErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.mockBehaviour()
+
+			got, err := service.DeleteUser(ctx, test.input)
 
 			if test.wantErr {
 				assert.Error(t, err)
