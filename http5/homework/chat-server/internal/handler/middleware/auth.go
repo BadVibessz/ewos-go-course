@@ -11,8 +11,6 @@ import (
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/middleware/mapper"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler/request"
-
 	handlerutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/handler"
 	jwtutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/jwt"
 )
@@ -20,7 +18,7 @@ import (
 type Handler = func(http.Handler) http.Handler
 
 type AuthService interface {
-	Login(ctx context.Context, loginReq request.LoginRequest) (*entity.User, error)
+	Login(ctx context.Context, username, password string) (*entity.User, error)
 }
 
 func BasicAuthMiddleware(authService AuthService, logger *logrus.Logger, valid *validator.Validate) Handler {
@@ -41,7 +39,7 @@ func BasicAuthMiddleware(authService AuthService, logger *logrus.Logger, valid *
 				return
 			}
 
-			user, err := authService.Login(req.Context(), *loginReq)
+			user, err := authService.Login(req.Context(), loginReq.Username, loginReq.Password)
 			if err != nil {
 				msg := fmt.Sprintf("error occurred while logging user: %v", err)
 
