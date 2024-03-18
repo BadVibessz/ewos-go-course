@@ -10,31 +10,31 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockHasher is a mock of Hasher interface.
-type MockHasher struct {
+// MockAuthHasher is a mock of Hasher interface.
+type MockUserHasher struct {
 	ctrl     *gomock.Controller
-	recorder *MockHasherMockRecorder
+	recorder *MockUserHasherMockRecorder
 }
 
-// MockHasherMockRecorder is the mock recorder for MockHasher.
-type MockHasherMockRecorder struct {
-	mock *MockHasher
+// MockAuthHasherMockRecorder is the mock recorder for MockAuthHasher.
+type MockUserHasherMockRecorder struct {
+	mock *MockUserHasher
 }
 
-// NewMockHasher creates a new mock instance.
-func NewMockHasher(ctrl *gomock.Controller) *MockHasher {
-	mock := &MockHasher{ctrl: ctrl}
-	mock.recorder = &MockHasherMockRecorder{mock}
+// NewMockAuthHasher creates a new mock instance.
+func NewMockUserHasher(ctrl *gomock.Controller) *MockUserHasher {
+	mock := &MockUserHasher{ctrl: ctrl}
+	mock.recorder = &MockUserHasherMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockHasher) EXPECT() *MockHasherMockRecorder {
+func (m *MockUserHasher) EXPECT() *MockUserHasherMockRecorder {
 	return m.recorder
 }
 
 // GenerateFromPassword mocks base method.
-func (m *MockHasher) GenerateFromPassword(arg0 []byte, arg1 int) ([]byte, error) {
+func (m *MockUserHasher) GenerateFromPassword(arg0 []byte, arg1 int) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateFromPassword", arg0, arg1)
 	ret0, _ := ret[0].([]byte)
@@ -43,7 +43,7 @@ func (m *MockHasher) GenerateFromPassword(arg0 []byte, arg1 int) ([]byte, error)
 }
 
 // GenerateFromPassword indicates an expected call of GenerateFromPassword.
-func (mr *MockHasherMockRecorder) GenerateFromPassword(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockUserHasherMockRecorder) GenerateFromPassword(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateFromPassword", reflect.TypeOf((*MockHasher)(nil).GenerateFromPassword), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateFromPassword", reflect.TypeOf((*MockUserHasher)(nil).GenerateFromPassword), arg0, arg1)
 }

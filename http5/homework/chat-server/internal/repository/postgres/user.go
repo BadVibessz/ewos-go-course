@@ -79,7 +79,17 @@ RETURNING id, email, username, hashed_password, created_at, updated_at`,
 }
 
 func (ur *UserRepo) getUserByArg(ctx context.Context, argName string, arg any) (*entity.User, error) {
-	row := ur.DB.QueryRowxContext(ctx, fmt.Sprintf("SELECT * FROM users WHERE %v = '%v'", argName, arg))
+	var query string
+
+	switch arg.(type) {
+	case string:
+		query = fmt.Sprintf("SELECT * FROM users WHERE %v = '%v'", argName, arg)
+
+	case int, float64:
+		query = fmt.Sprintf("SELECT * FROM users WHERE %v = %v", argName, arg)
+	}
+
+	row := ur.DB.QueryRowxContext(ctx, query)
 	if err := row.Err(); err != nil {
 		return nil, err
 	}

@@ -294,9 +294,8 @@ func TestUserRepo_GetByID(t *testing.T) {
 					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"}).
 					AddRow(1, "username", "email@mail.com", "hashed_password", time.Time{}, time.Time{})
 
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM users WHERE id = 1")). // TODO: NOT WORKING!
-													WithArgs(1).
-													WillReturnRows(rows)
+				mock.ExpectQuery("SELECT * FROM users WHERE id = 1").
+					WillReturnRows(rows)
 			},
 			input: 1,
 			want: entity.User{
@@ -364,7 +363,7 @@ func TestUserRepo_GetByUsername(t *testing.T) {
 		wantErr       bool
 	}{
 		{
-			name: "ok, valid username",
+			name: "ok, valid username", // TODO: NOT FUCKING WORKING
 			mockBehaviour: func() {
 				rows := sqlxmock.
 					NewRows([]string{"id", "username", "email", "hashed_password", "created_at", "updated_at"}).

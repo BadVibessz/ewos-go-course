@@ -1,5 +1,7 @@
 package slice
 
+import "math"
+
 func Filter[T any](ss []T, test func(T) bool) []T {
 	res := make([]T, 0, len(ss))
 
@@ -39,6 +41,18 @@ func Unique[T comparable](s []T) []T {
 }
 
 func Slice[T any](s []T, offset int, limit int) []T {
+	if limit == 0 {
+		return nil
+	}
+
+	if offset > len(s) {
+		return nil
+	}
+
+	if limit == math.MaxInt64 {
+		limit = len(s)
+	}
+
 	leftBound := offset
 	rightBound := leftBound + limit
 

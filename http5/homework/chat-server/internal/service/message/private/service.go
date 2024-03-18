@@ -2,9 +2,10 @@ package private
 
 import (
 	"context"
-	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
 	"math"
 	"slices"
+
+	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/service/message"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 
@@ -76,9 +77,9 @@ func (s *Service) GetPrivateMessage(ctx context.Context, id int) (*entity.Privat
 func (s *Service) GetAllPrivateMessages(ctx context.Context, toUsername string, offset, limit int) []*entity.PrivateMessage {
 	messages := s.PrivateMessageRepo.GetAllPrivateMessages(ctx, 0, math.MaxInt64)
 
-	// return only messages that were sent to or from current user
+	// return only messages that were sent to or from user
 	messages = sliceutils.Filter(messages, func(msg *entity.PrivateMessage) bool {
-		return msg.ToUsername == toUsername || msg.FromUsername == toUsername
+		return (msg.ToUsername == toUsername) || (msg.FromUsername == toUsername)
 	})
 
 	return sliceutils.Slice(messages, offset, limit)
@@ -98,15 +99,34 @@ func (s *Service) GetAllPrivateMessagesFromUser(ctx context.Context, toUsername,
 }
 
 func (s *Service) GetAllUsersThatSentMessage(ctx context.Context, toUsername string, offset, limit int) []*entity.User {
-	messages := s.GetAllPrivateMessages(ctx, toUsername, offset, limit)
-	usersFromIds := sliceutils.Unique(sliceutils.Map(messages, func(msg *entity.PrivateMessage) string { return msg.FromUsername }))
+	if limit <= 0 {
+		return nil
+	}
+
+	messages := s.GetAllPrivateMessages(ctx, toUsername, 0, math.MaxInt64)
+
+	// interested only in messages that sent to user
+	messages = sliceutils.Filter(messages, func(msg *entity.PrivateMessage) bool { return msg.FromUsername != toUsername })
+	fromUsernames := sliceutils.Unique(sliceutils.Map(messages, func(msg *entity.PrivateMessage) string { return msg.FromUsername }))
+
+	if offset >= len(fromUsernames) {
+		return nil
+	}
 
 	allUsers := s.UserRepo.GetAllUsers(ctx, 0, math.MaxInt64)
 
-	res := make([]*entity.User, 0, len(usersFromIds))
-	for _, usr := range allUsers {
-		if slices.Contains(usersFromIds, usr.Username) {
+	res := make([]*entity.User, 0, len(fromUsernames))
+
+	appended := 0
+	for i, usr := range allUsers {
+		if appended >= limit {
+			break
+		}
+
+		if i >= offset && slices.Contains(fromUsernames, usr.Username) {
 			res = append(res, usr)
+
+			appended++
 		}
 	}
 

@@ -2,10 +2,11 @@ package user
 
 import (
 	"context"
-	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 	"math"
 	"testing"
 	"time"
+
+	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ func TestUserService_Register(t *testing.T) {
 	now := time.Now()
 
 	repoMock := mocks.NewMockUserRepo(ctrl)
-	hasherMock := mocks.NewMockHasher(ctrl)
+	hasherMock := mocks.NewMockUserHasher(ctrl)
 
 	service := New(repoMock, hasherMock)
 
@@ -114,7 +115,7 @@ func TestUserService_GetByID(t *testing.T) {
 	now := time.Now()
 
 	repoMock := mocks.NewMockUserRepo(ctrl)
-	hasherMock := mocks.NewMockHasher(ctrl)
+	hasherMock := mocks.NewMockUserHasher(ctrl)
 
 	service := New(repoMock, hasherMock)
 
@@ -204,7 +205,7 @@ func TestUserService_GetByEmail(t *testing.T) {
 	now := time.Now()
 
 	repoMock := mocks.NewMockUserRepo(ctrl)
-	hasherMock := mocks.NewMockHasher(ctrl)
+	hasherMock := mocks.NewMockUserHasher(ctrl)
 
 	service := New(repoMock, hasherMock)
 
@@ -282,7 +283,7 @@ func TestUserService_GetByUsername(t *testing.T) {
 	now := time.Now()
 
 	repoMock := mocks.NewMockUserRepo(ctrl)
-	hasherMock := mocks.NewMockHasher(ctrl)
+	hasherMock := mocks.NewMockUserHasher(ctrl)
 
 	service := New(repoMock, hasherMock)
 
@@ -360,7 +361,7 @@ func TestUserService_GetAll(t *testing.T) {
 	now := time.Now()
 
 	repoMock := mocks.NewMockUserRepo(ctrl)
-	hasherMock := mocks.NewMockHasher(ctrl)
+	hasherMock := mocks.NewMockUserHasher(ctrl)
 
 	service := New(repoMock, hasherMock)
 
@@ -609,13 +610,13 @@ func TestUserService_GetAll(t *testing.T) {
 	}
 }
 
-func TestUserService_Update(t *testing.T) {
+func TestUserService_Update(t *testing.T) { // TODO: TEST THAT UPDATED_AT FIELD CHANGED
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 	now := time.Now()
 
 	repoMock := mocks.NewMockUserRepo(ctrl)
-	hasherMock := mocks.NewMockHasher(ctrl)
+	hasherMock := mocks.NewMockUserHasher(ctrl)
 
 	service := New(repoMock, hasherMock)
 
@@ -767,7 +768,7 @@ func TestUserService_Delete(t *testing.T) {
 	now := time.Now()
 
 	repoMock := mocks.NewMockUserRepo(ctrl)
-	hasherMock := mocks.NewMockHasher(ctrl)
+	hasherMock := mocks.NewMockUserHasher(ctrl)
 
 	service := New(repoMock, hasherMock)
 

@@ -97,6 +97,10 @@ func (h *Hasher) GenerateFromPassword(password []byte, cost int) ([]byte, error)
 	return bcrypt.GenerateFromPassword(password, cost)
 }
 
+func (h *Hasher) CompareHashAndPassword(hashedPassword []byte, password []byte) error {
+	return bcrypt.CompareHashAndPassword(hashedPassword, password)
+}
+
 func initDB(ctx context.Context) (*inmemory.InMemDB, <-chan any) {
 	var inMemDB *inmemory.InMemDB
 
@@ -226,10 +230,12 @@ func main() {
 		userRepo, publicMessageRepo, privateMessageRepo = initPostgresRepos(conf, logger)
 	}
 
-	userService := userservice.New(userRepo, &Hasher{})
+	hasher := &Hasher{}
+
+	userService := userservice.New(userRepo, hasher)
 	publicMessageService := publicmessageservice.New(publicMessageRepo, userRepo)
 	privateMessageService := privatemessageservice.New(privateMessageRepo, userRepo)
-	authService := authservice.New(userRepo)
+	authService := authservice.New(userRepo, hasher)
 
 	valid := validator.New(validator.WithRequiredStructEnabled())
 

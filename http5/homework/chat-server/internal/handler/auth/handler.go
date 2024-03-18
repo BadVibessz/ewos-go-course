@@ -32,7 +32,7 @@ type UserService interface {
 }
 
 type AuthService interface {
-	Login(ctx context.Context, loginReq request.LoginRequest) (*entity.User, error)
+	Login(ctx context.Context, username, password string) (*entity.User, error)
 }
 
 type Middleware = func(http.Handler) http.Handler
@@ -154,7 +154,7 @@ func (h *Handler) Login(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	user, err := h.AuthService.Login(req.Context(), loginReq)
+	user, err := h.AuthService.Login(req.Context(), loginReq.Username, loginReq.Password)
 	if err != nil {
 		msg := fmt.Sprintf("error occurred while user login: %v", err)
 
