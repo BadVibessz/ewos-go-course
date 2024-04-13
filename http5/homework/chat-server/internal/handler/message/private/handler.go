@@ -5,11 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"github.com/sirupsen/logrus"
-	"net/http"
 
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/handler"

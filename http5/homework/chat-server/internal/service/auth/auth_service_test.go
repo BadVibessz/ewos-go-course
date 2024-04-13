@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/mocks"
-	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/testing"
+	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/testing"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"testing"

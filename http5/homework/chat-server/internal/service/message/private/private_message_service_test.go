@@ -3,6 +3,7 @@ package private
 import (
 	"context"
 	"errors"
+	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/testing"
 	"math"
 	"testing"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/mocks"
 	repoerrors "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
-	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/testing"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )

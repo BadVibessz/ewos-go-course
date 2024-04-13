@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/testing"
 	"math"
 	"regexp"
 	"testing"
@@ -15,7 +16,6 @@ import (
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
-	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/testing"
 )
 
 func TestPublicMessageRepo_AddMessage(t *testing.T) { // TODO: CHANGE!

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
+	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/testing"
 	"github.com/stretchr/testify/assert"
 	"math"
 	"regexp"
@@ -13,7 +14,6 @@ import (
 	sqlxmock "github.com/zhashkevych/go-sqlxmock"
 
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
-	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/testing"
 )
 
 func TestPrivateMessageRepo_AddMessage(t *testing.T) {

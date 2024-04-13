@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/domain/entity"
 	"github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/mocks"
+	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/pkg/utils/testing"
 	sliceutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/slice"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -13,7 +14,6 @@ import (
 	"time"
 
 	repoerrors "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/internal/repository"
-	testingutils "github.com/ew0s/ewos-to-go-hw/http5/homework/chat-server/pkg/utils/testing"
 )
 
 func TestPublicMessageService_Send(t *testing.T) {
